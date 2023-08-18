@@ -31,6 +31,16 @@ def handle_photo(message):
     try:
         # Выполняем скрипт для создания маски
 
+        pascal_command  = [
+            "python3",
+            "/content/ggoolfsdfs23/simple_extractor.py",  # Проверьте путь к скрипту
+            "--dataset", "pascal",
+            "--model-restore", "pascal/pascal.pth",
+            "--input-dir", "images",
+            "--output-dir", "pascal_results"
+        ]
+        subprocess.run(pascal_command)
+
         lib_command  = [
             "python3",
             "/content/ggoolfsdfs23/simple_extractor.py",  # Проверьте путь к скрипту
@@ -40,9 +50,23 @@ def handle_photo(message):
             "--output-dir", "lib_results"
         ]
         subprocess.run(lib_command)
+        
+        pascal_mask_path = 'pascal_results/' + file_id + '.png'
+        lib_mask_path = 'lib_results/' + file_id + '.png'
+
+        pascal_mask = Image.open(pascal_mask_path).convert("L")
+        lib_mask = Image.open(lib_mask_path).convert("L")
+        
+
+        # Применяем операцию объединения масок
+        alpha = 1
+        combined_mask = Image.blend(pascal_mask, lib_mask, alpha)
+
+        combined_mask_path = 'results/' + file_id + '.png'
+        combined_mask.save(combined_mask_path)
 
         # Применяем инпейнтинг
-        mask_path = 'lib_results/' + file_id + '.png'
+        mask_path = combined_mask_path
         result2_path = 'images/' + file_id + '.jpg'  # Путь к вашему result2 изображению
 
         mask = Image.open(mask_path)
