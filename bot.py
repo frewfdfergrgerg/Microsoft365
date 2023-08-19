@@ -5,7 +5,7 @@ from PIL import Image, ImageOps
 from io import BytesIO
 import os, subprocess, time, glob
 import webuiapi
-
+import re
 token = "6550926108:AAHbCdI05A5S44_cK693jKmyStWlTRwbSuo"
 bot = telebot.TeleBot(token)
 
@@ -17,6 +17,15 @@ api = webuiapi.WebUIApi(host='127.0.0.1',
                         steps=40)
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
+
+      # Получаем текст 
+    text = message.caption
+
+    # Извлекаем ID фото из текста
+    match = re.search(r"(\d+)-", text)
+    if match:
+      photo_id = match.group(1)
+      
     file_id = message.photo[-1].file_id
 
     # Скачиваем фото
@@ -84,7 +93,7 @@ def handle_photo(message):
         with BytesIO() as buf:
             inpainting_result.image.save(buf, format='PNG')
             buf.seek(0)
-            bot.send_photo(message.chat.id, photo=buf)
+            bot.send_photo(message.chat.id, photo=buf, caption="/true {}".format(photo_id))
 
         # Удаляем файлы
         os.remove(src)
