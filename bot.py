@@ -33,7 +33,7 @@ def handle_photo(message):
 
         pascal_command  = [
             "python3",
-            "/content/ggoolfsdfs23/simple_extractor.py",  # Проверьте путь к скрипту
+            "/content/detecthuman/simple_extractor.py",  # Проверьте путь к скрипту
             "--dataset", "pascal",
             "--model-restore", "pascal/pascal.pth",
             "--input-dir", "images",
@@ -43,7 +43,7 @@ def handle_photo(message):
 
         lib_command  = [
             "python3",
-            "/content/ggoolfsdfs23/simple_extractor.py",  # Проверьте путь к скрипту
+            "/content/detecthuman/simple_extractor.py",  # Проверьте путь к скрипту
             "--dataset", "lip",
             "--model-restore", "lib/lib.pth",
             "--input-dir", "images",
