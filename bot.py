@@ -22,7 +22,7 @@ def handle_photo(message):
     text = message.caption
 
     # Извлекаем ID фото из текста
-    match = re.search(r"(\d+)-", text)
+    match = re.search(r"ID: (\d+)", text)
     if match:
       photo_id = match.group(1)
       
