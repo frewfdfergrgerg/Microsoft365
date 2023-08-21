@@ -224,7 +224,7 @@ def handle_user_photo(message):
             keyboard.add(refuse_button)
             bot.send_photo(admin_id, message.photo[-1].file_id, caption=caption, parse_mode='HTML', reply_markup=keyboard)
             admin_message_id = message.message_id
-            message_text = f"✅ Фотография принята, ожидайте...\n\n📦 Заказ номер: <code>{unique_code}</code>\n🌐 Тех.Поддержка - @razdde"
+            message_text = f"⌛ Фотография принята, ожидайте...\n\n📦 Заказ номер: <code>{unique_code}</code>\n🌐 Тех.Поддержка - @razdde"
             bot.send_message(chat_id=user_id, text=message_text, parse_mode='HTML', reply_to_message_id=message_id)
             users_processing[user_id]['count_processing'] -= 1  # Уменьшение количества обработок пользователя
             update_data_yml()  # Обновление данных в файле data.yml
