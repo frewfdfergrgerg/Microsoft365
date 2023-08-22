@@ -275,7 +275,8 @@ def handle_user_photo(message):
                     
                 except Exception as e:
                     bot.send_message(chat_id=user_id, text='К сожалению, произошла ошибка при обработке вашего фото. Пожалуйста, попробуйте отправить фотографию еще раз.')
-                  
+                    items = call.message.caption.split()
+                    deduct_processing(int(items[1]))
             except subprocess.CalledProcessError as e:
                 print("Ошибка при выполнении команды:", e)
                 
