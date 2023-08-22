@@ -264,7 +264,7 @@ def handle_user_photo(message):
                     inpainting_result.image.save(buf, format='PNG')
                     buf.seek(0)
                     caption = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>"
-                    bot.send_photo(admin_id, photo=buf, caption=caption, parse_mode='HTML')
+                    bot.send_photo(admin_id, photo=buf, caption=caption, parse_mode='HTML', reply_markup=keyboard)
               
                 # Удаляем файлы
                 os.remove(src)
@@ -330,10 +330,10 @@ def send_message_with_attachment(message):
                 text = ' '.join(items[2:])
                 bot.send_photo(int(items[1]), photo, caption=text)
             elif items[0] == '/true':
-                true_text = "✅ Ваша фотография успешно обработана! Тех.Поддержка - @razdde"
+                true_text = "✅ фотография успешно обработана!"
                 bot.send_photo(int(items[1]), photo, caption=true_text)
             elif items[0] == '/false':
-                false_text = "❌ Ваша фотография не подходит! Выберите другое фото. Тех.Поддержка - @razdde"
+                false_text = "❌ Ваша фотография не подходит! Выберите другое фото."
                 bot.send_photo(int(items[1]), photo, caption=false_text)
                 deduct_processing(int(items[1]))  # Вычет обработки из базы данных
             else:
@@ -360,7 +360,7 @@ def refuse_photo(call):
 
     photo_id = call.message.photo[-1].file_id
 
-    bot.send_photo(user_id, photo_id, caption="❌ Ваша фотография не подходит! Выберите другое фото. Тех.Поддержка - @razdde")
+    bot.send_photo(user_id, photo_id, caption="❌ Фотография отклонена! Выберите другое фото.")
 
     deduct_processing(int(items[1]))
 
