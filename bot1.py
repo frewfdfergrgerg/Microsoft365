@@ -274,9 +274,14 @@ def handle_user_photo(message):
                     os.remove(lib_mask_path)
                     
                 except Exception as e:
-                    bot.send_message(chat_id=user_id, text='К сожалению, произошла ошибка при обработке вашего фото. Пожалуйста, попробуйте отправить фотографию еще раз.')
-                    items = call.message.caption.split()
-                    deduct_processing(int(items[1]))
+                    bot.send_message(chat_id=user_id, text='❌ Фото отклонено. Отправь другое фото.', reply_to_message_id=message_id)
+                    users_processing[user_id]['count_processing'] += 1
+
+                    with open('data.yml', 'w') as file:
+                        yaml.safe_dump(users_processing, file)
+
+                    message_text = "✅ 1 обработка вернулась на счет."
+                    bot.send_message(user_id, message_text)
             except subprocess.CalledProcessError as e:
                 print("Ошибка при выполнении команды:", e)
                 
@@ -392,6 +397,8 @@ def deduct_processing(user_id):
 
     else:
        bot.send_message(user_id, "Профиль пользователя не найден.")
+       
+
 
 @bot.message_handler(commands=['start'])
 def start(message):
