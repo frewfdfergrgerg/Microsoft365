@@ -379,7 +379,7 @@ def deduct_processing(user_id):
        with open('data.yml', 'w') as file:
            yaml.safe_dump(users_processing, file)
 
-       message_text = "✅ Одна обработка вернулась на счет."
+       message_text = "✅ 1 обработка вернулась на счет."
        bot.send_message(user_id, message_text)
 
     else:
