@@ -238,37 +238,44 @@ def handle_user_photo(message):
                     "--input-dir", "images",
                     "--output-dir", "lib_results"
                 ]
-                subprocess.run(lib_command)   
-                lib_mask_path = 'lib_results/' + file_id + '.png'
-                lib_mask = Image.open(lib_mask_path).convert("L")
-                # Применяем инпейнтинг
-                result2_path = 'images/' + file_id + '.jpg'  # Путь к вашему result2 изображению
-                mask = Image.open(lib_mask_path)
-                result2 = Image.open(result2_path)
-                inpainting_result = api.img2img(images=[result2],
-                                                mask_image=mask,
-                                                inpainting_fill=10,
-                                                cfg_scale=2.0,
-                                                prompt="naked woman without clothes, naked breasts, naked vagina, excessive detail, (skin pores: 1.1), (skin with high detail: 1.2), (skin shots: 0.9), film grain, soft lighting, high quality",
-                                                negative_prompt="(deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, (mutated hands and fingers:1.4), disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation",
-                                                denoising_strength=0.9)
-                # Отправляем результат пользователю
-                with BytesIO() as buf:
-                    inpainting_result.image.save(buf, format='PNG')
-                    buf.seek(0)
-                    bot.send_photo(message.chat.id, photo=buf, caption="✅ Фотография успешно обработана! Тех.Поддержка - @razdde")
+                            
+                subprocess.run(lib_command)  
+
+                try:
+                    lib_mask_path = 'lib_results/' + file_id + '.png'
+                    lib_mask = Image.open(lib_mask_path).convert("L")
+                    # Применяем инпейнтинг
+                    result2_path = 'images/' + file_id + '.jpg'  # Путь к вашему result2 изображению
+                    mask = Image.open(lib_mask_path)
+                    result2 = Image.open(result2_path)           
+                    inpainting_result = api.img2img(images=[result2],
+                                                    mask_image=mask,
+                                                    inpainting_fill=10,
+                                                    cfg_scale=2.0,
+                                                    prompt="naked woman without clothes, naked breasts, naked vagina, excessive detail, (skin pores: 1.1), (skin with high detail: 1.2), (skin shots: 0.9), film grain, soft lighting, high quality",
+                                                    negative_prompt="(deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, (mutated hands and fingers:1.4), disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation",
+                                                    denoising_strength=0.9)
+                    # Отправляем результат пользователю
+                    with BytesIO() as buf:
+                        inpainting_result.image.save(buf, format='PNG')
+                        buf.seek(0)
+                        bot.send_photo(message.chat.id, photo=buf, caption="✅ Фотография успешно обработана!")
                   
-                # Отправляем результат администратору  
+                    # Отправляем результат администратору  
                 
-                with BytesIO() as buf:
-                    inpainting_result.image.save(buf, format='PNG')
-                    buf.seek(0)
-                    caption = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>"
-                    bot.send_photo(admin_id, photo=buf, caption=caption, parse_mode='HTML', reply_markup=keyboard)
+                    with BytesIO() as buf:
+                        inpainting_result.image.save(buf, format='PNG')
+                        buf.seek(0)
+                        caption = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>"
+                        bot.send_photo(admin_id, photo=buf, caption=caption, parse_mode='HTML', reply_markup=keyboard)
               
-                # Удаляем файлы
-                os.remove(src)
-                os.remove(lib_mask_path)
+                    # Удаляем файлы
+                    os.remove(src)
+                    os.remove(lib_mask_path)
+                    
+                except Exception as e:
+                    bot.send_message(chat_id=user_id, text='К сожалению, произошла ошибка при обработке вашего фото. Пожалуйста, попробуйте отправить фотографию еще раз.')
+                  
             except subprocess.CalledProcessError as e:
                 print("Ошибка при выполнении команды:", e)
                 
