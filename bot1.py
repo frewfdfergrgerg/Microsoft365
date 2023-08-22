@@ -266,7 +266,7 @@ def handle_user_photo(message):
                     with BytesIO() as buf:
                         inpainting_result.image.save(buf, format='PNG')
                         buf.seek(0)
-                        caption = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>"
+                        caption = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>\n✔️ Резльтат ✔️"
                         bot.send_photo(admin_id, photo=buf, caption=caption, parse_mode='HTML', reply_markup=keyboard)
               
                     # Удаляем файлы
