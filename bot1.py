@@ -354,15 +354,6 @@ def send_message_with_attachment(message):
         else:
             bot.reply_to(message, "Подпись к фото отсутствует.")
 
-@bot.message_handler(commands=['allsend'])
-def handle_allsend(message):
-    global waiting_for_broadcast
-    if message.from_user.id == admin_id:
-        bot.send_message(message.chat.id, "Введите текст сообщения для массовой рассылки:")
-        waiting_for_broadcast = True
-    else:
-        bot.send_message(message.chat.id, "У вас нет прав для выполнения этой команды.")
-
 
 @bot.callback_query_handler(func=lambda call: call.data == 'refuse_photo')
 def refuse_photo(call):
@@ -646,33 +637,6 @@ def show_stat(message):
     else:
         bot.reply_to(message, "У вас нет доступа к этой команде.")
 
-# Обработчик команды /send
-@bot.message_handler(commands=['send'])
-def send_message_with_attachment1(message):
-    # Проверяем, является ли отправитель администратором
-        # Разделяем команду на аргументы (айди пользователя и текст сообщения)
-        command_args = message.text.split()
-        if len(command_args) >= 3:
-            user_id = int(command_args[1])
-            text = ' '.join(command_args[2:])
-
-            # Отправка сообщения пользователю
-            bot.send_message(user_id, text)
-
-            # Проверка на наличие прикрепленных файлов
-            if message.photo:
-                # Отправка всех прикрепленных фотографий
-                for photo in message.photo:
-                    photo_id = photo.file_id
-                    bot.send_photo(user_id, photo_id)
-
-            if message.document:
-                # Отправка всех прикрепленных документов
-                for document in message.document:
-                    document_id = document.file_id
-                    bot.send_document(user_id, document_id)
-        else:
-            bot.reply_to(message, "Неверный формат команды. Используйте /send <user_id> <текст>")
 
 # Обработчик команды /info
 @bot.message_handler(commands=['info'])
@@ -707,34 +671,6 @@ def check_payment_status_thread(token, label, user_id, count_processing):
         bot.send_message(user_id, "Платеж неуспешный. Пожалуйста, попробуйте еще раз.")
         print("Платеж неуспешный")
 
-# Обработчик команды /all
-@bot.message_handler(commands=['all'])
-def send_message_to_all(message):
-    # Проверяем, является ли отправитель администратором
-    if message.from_user.id == ADMIN_ID:
-        # Получение текста сообщения и прикрепленного файла (если есть)
-        command_args = message.text.split(maxsplit=1)
-        if len(command_args) == 2:
-            text = command_args[1]
-            document = message.document
-            photo = message.photo
-
-            # Отправка сообщения всем пользователям
-            for user_id in users_processing:
-                try:
-                    if text:
-                        bot.send_message(user_id, text)
-                    if document:
-                        bot.send_document(user_id, document.file_id)
-                    if photo:
-                        bot.send_photo(user_id, photo[-1].file_id)
-                except Exception as e:
-                    print(f"Ошибка при отправке сообщения пользователю {user_id}: {str(e)}")
-
-        else:
-            bot.reply_to(message, "Неверный формат команды. Используйте /all <сообщение>")
-    else:
-        bot.reply_to(message, "У вас нет доступа к этой команде.")
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_tariff_selection(call):
@@ -794,4 +730,9 @@ def handle_tariff_selection(call):
 
 
 # Запуск бота
-bot.polling(1000000)
+while True:
+  try:
+    bot.polling(none_stop=True) 
+  except Exception as e:
+    print(f"Ошибка в цикле: {e}")
+    time.sleep(15)
