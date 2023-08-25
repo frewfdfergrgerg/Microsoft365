@@ -16,7 +16,7 @@ from io import BytesIO
 import os, subprocess, time, glob
 import webuiapi
 import re
-
+from PIL import ImageFilter
 # Инициализируем API для инпейнтинга
 # api = webuiapi.WebUIApi()
 api = webuiapi.WebUIApi(host='127.0.0.1',
