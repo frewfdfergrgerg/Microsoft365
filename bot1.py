@@ -284,16 +284,22 @@ def handle_user_photo(message):
                     else:
                         caption = "✅ Фотография успешно обработана!"
                         bot.send_photo(message.chat.id, photo=buf, caption=caption, parse_mode='HTML')
-                  
-                # Отправляем результат администратору  
-                with BytesIO() as buf:
-                    inpainting_result.image.save(buf, format='PNG')
-                    buf.seek(0)
-                    if free_processing == 1:
-                        caption = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>\n♻️ Free ♻️"
-                    else:
-                        caption = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>\n✔️ Результат ✔️"
-                    bot.send_photo(admin_id, photo=buf, caption=caption, parse_mode='HTML', reply_markup=keyboard)
+
+                # Отправляем результат администратору
+                if free_processing == 1:
+                    # Отправляем замыленную версию администратору
+                    with BytesIO() as buf_admin:
+                        inpainting_result.image.save(buf_admin, format='PNG')
+                        buf_admin.seek(0)
+                        caption_admin = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>\n♻️ Free ♻️"
+                        bot.send_photo(admin_id, photo=buf_admin, caption=caption_admin, parse_mode='HTML', reply_markup=keyboard)
+                else:
+                    # Отправляем не замыленную версию администратору
+                    with BytesIO() as buf_admin:
+                        result2.save(buf_admin, format='PNG')  # Сохраненный result2, не замыленный результат
+                        buf_admin.seek(0)
+                        caption_admin = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>\n✔️ Результат ✔️"
+                        bot.send_photo(admin_id, photo=buf_admin, caption=caption_admin, parse_mode='HTML', reply_markup=keyboard)
               
                 # Удаляем файлы
                 os.remove(src)
