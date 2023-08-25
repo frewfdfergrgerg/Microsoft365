@@ -229,7 +229,7 @@ def handle_user_photo(message):
 
             keyboard_user = types.InlineKeyboardMarkup()
             if free_processing == 1:
-                buy_button = types.InlineKeyboardButton('🛒 Купить обработку', callback_data='buy_processing1')
+                buy_button = types.InlineKeyboardButton('🛒 Купить обработку', callback_data='buy_processing2')
                 keyboard_user.add(buy_button)
 
             # Отправляем фото администратору с соответствующей клавиатурой
@@ -275,7 +275,7 @@ def handle_user_photo(message):
 
                 if free_processing == 1:
                     # Замыляем результат
-                    blurred_result = inpainting_result.image.filter(ImageFilter.GaussianBlur(radius=12))
+                    blurred_result = inpainting_result.image.filter(ImageFilter.GaussianBlur(radius=7))
                     final_result = blurred_result
                 else:
                     # Оставляем результат без замыления
@@ -334,6 +334,34 @@ def cancel_photo(call):
                            caption=call.message.caption + "\n" + refusal_caption)
 
 
+@bot.callback_query_handler(func=lambda call: call.data == 'buy_processing2')
+def buy_processing_callback(call):
+    user_id = call.from_user.id
+    # Логика обработки нажатия на кнопку "Купить обработку"
+    if user_id not in users_processing:
+        users_processing[user_id] = {'user_name': bot.get_chat(user_id).username, 'count_processing': 0}
+
+
+    # Создание клавиатуры с кнопками тарифов
+    keyboard = types.InlineKeyboardMarkup(row_width=2)
+    button1 = types.InlineKeyboardButton(amounts['button1']['name'], callback_data='tariff_1')
+    button2 = types.InlineKeyboardButton(f"{amounts['button1']['price_name']}", callback_data='tariff_1')
+    button3 = types.InlineKeyboardButton(amounts['button2']['name'], callback_data='tariff_2')
+    button4 = types.InlineKeyboardButton(f"{amounts['button2']['price_name']}", callback_data='tariff_2')
+    button5 = types.InlineKeyboardButton(amounts['button3']['name'], callback_data='tariff_3')
+    button6 = types.InlineKeyboardButton(f"{amounts['button3']['price_name']}", callback_data='tariff_3')
+    button7 = types.InlineKeyboardButton(amounts['button4']['name'], callback_data='tariff_4')
+    button8 = types.InlineKeyboardButton(f"{amounts['button4']['price_name']}", callback_data='tariff_4')
+    keyboard.add(button1, button2)
+    keyboard.add(button3, button4)
+    keyboard.add(button5, button6)
+    keyboard.add(button7, button8)
+
+    # Формирование сообщения с количеством обработок и выбором тарифа
+    count_processing = users_processing[user_id]['count_processing']
+    message_text = f"Количество обработок: {count_processing}\n\n<b>Выберите тариф:</b>"
+    bot.send_message(call.message.chat.id, text=message_text, reply_markup=keyboard, parse_mode='HTML')
+  
 @bot.callback_query_handler(func=lambda call: call.data == 'buy_processing1')
 def buy_processing_callback(call):
     user_id = call.from_user.id
