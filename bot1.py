@@ -296,6 +296,7 @@ def handle_user_photo(message):
                 os.remove(lib_mask_path)
                     
             except Exception as e:
+                print("An error occurred:", str(e))
                 if free_processing == 1:
                     bot.send_message(chat_id=user_id, text='❌ Фото отклонено. Отправьте другое фото.', reply_to_message_id=message_id)
                     users_processing[user_id]['free'] += 1
