@@ -546,7 +546,7 @@ def buy_processing(message):
 
     count_processing = users_processing[user_id]['count_processing']
     free_processing = users_processing[user_id]['free']  # Получаем количество бесплатных обработок
-    message_text = f"Количество обработок: {count_processing}\nКоличество бесплатных обработок: {free_processing}\n\n<b>Выберите тариф:</b>"
+    message_text = f"Количество обработок: {count_processing}\n\n<b>Выберите тариф:</b>"
     bot.send_message(message.chat.id, text=message_text, reply_markup=keyboard, parse_mode='HTML')
 
     # Сохранение данных в файл
