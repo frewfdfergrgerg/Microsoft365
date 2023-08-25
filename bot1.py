@@ -204,7 +204,7 @@ def handle_user_photo(message):
     if user_id in users_processing:
         count_processing = users_processing[user_id]['count_processing']
         free_processing = users_processing[user_id]['free']
-        
+
         if count_processing > 0 or free_processing == 1:
             admin_id = ADMIN_ID
             message_id = message.message_id 
@@ -212,30 +212,40 @@ def handle_user_photo(message):
             file_id = message.photo[-1].file_id
             file_path = bot.get_file(file_id).file_path
             downloaded_file = bot.download_file(file_path)
-            
+
             # Сохраняем фото
             src = 'images/' + file_id + '.jpg'
             with open(src, 'wb') as new_file:
                 new_file.write(downloaded_file)
-                
+
             unique_code = f"{secrets.token_hex(5)}"
             caption = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>"
             photo_id = message.photo[-1].file_id
-            keyboard = types.InlineKeyboardMarkup()
+
+            # Создаем клавиатуры для администратора и пользователя
+            keyboard_admin = types.InlineKeyboardMarkup()
             refuse_button = types.InlineKeyboardButton('Отказать', callback_data='refuse_photo')
-            keyboard.add(refuse_button)
-            bot.send_photo(admin_id, message.photo[-1].file_id, caption=caption, parse_mode='HTML', reply_markup=keyboard)
+            keyboard_admin.add(refuse_button)
+
+            keyboard_user = types.InlineKeyboardMarkup()
+            if free_processing == 1:
+                buy_button = types.InlineKeyboardButton('🛒 Купить обработку', callback_data='buy_processing1')
+                keyboard_user.add(buy_button)
+
+            # Отправляем фото администратору с соответствующей клавиатурой
+            bot.send_photo(admin_id, message.photo[-1].file_id, caption=caption, parse_mode='HTML', reply_markup=keyboard_admin)
+
             admin_message_id = message.message_id
             message_text = f"⌛ Фотография принята, ожидайте...\n\n📦 Заказ номер: <code>{unique_code}</code>\n🌐 Тех.Поддержка - @razdde"
             bot.send_message(chat_id=user_id, text=message_text, parse_mode='HTML', reply_to_message_id=message_id)
-            
+
             # Обновляем информацию о пользователе перед отправкой результата
             if free_processing == 1:
                 users_processing[user_id]['free'] = 0
             else:
                 users_processing[user_id]['count_processing'] -= 1
             update_data_yml()
-            
+
             try:
                 # Выполняем скрипт для создания маски
                 lib_command  = [
@@ -246,15 +256,15 @@ def handle_user_photo(message):
                     "--input-dir", "images",
                     "--output-dir", "lib_results"
                 ]
-                            
-                subprocess.run(lib_command)  
+
+                subprocess.run(lib_command)
 
                 lib_mask_path = 'lib_results/' + file_id + '.png'
                 lib_mask = Image.open(lib_mask_path).convert("L")
                 # Применяем инпейнтинг
                 result2_path = 'images/' + file_id + '.jpg'  # Путь к вашему result2 изображению
                 mask = Image.open(lib_mask_path)
-                result2 = Image.open(result2_path)           
+                result2 = Image.open(result2_path)
                 inpainting_result = api.img2img(images=[result2],
                                                 mask_image=mask,
                                                 inpainting_fill=10,
@@ -262,7 +272,7 @@ def handle_user_photo(message):
                                                 prompt="woman",
                                                 negative_prompt="(deformed, distorted, disfigured:1.3)",
                                                 denoising_strength=0.9)
-                                                
+
                 if free_processing == 1:
                     # Замыляем результат
                     blurred_result = inpainting_result.image.filter(ImageFilter.GaussianBlur(radius=10))
@@ -270,41 +280,26 @@ def handle_user_photo(message):
                 else:
                     # Оставляем результат без замыления
                     final_result = inpainting_result.image
-                    
+
                 # Отправляем результат пользователю
                 with BytesIO() as buf:
                     final_result.save(buf, format='PNG')
                     buf.seek(0)
-                    if free_processing == 1:
-                        caption = f"✅ Фотография успешно обработана!\n\n🔑 Купите обработки, чтобы получить результат без цензуры 👇"
-                        # Добавляем инлайн-кнопку "Купить обработку" к сообщению с результатом
-                        buy_button = types.InlineKeyboardButton('🛒 Купить обработку', callback_data='buy_processing1')
-                        keyboard.add(buy_button)
-                        bot.send_photo(message.chat.id, photo=buf, caption=caption, parse_mode='HTML', reply_markup=keyboard)
-                    else:
-                        caption = "✅ Фотография успешно обработана!"
-                        bot.send_photo(message.chat.id, photo=buf, caption=caption, parse_mode='HTML')
+                    caption = f"✅ Фотография успешно обработана!\n\n💳 Купите обработки, чтобы получить результат без цензуры 👇"
+                    # Добавляем инлайн-кнопку "Купить обработку" к сообщению с результатом
+                    bot.send_photo(message.chat.id, photo=buf, caption=caption, parse_mode='HTML', reply_markup=keyboard_user)
 
                 # Отправляем результат администратору
-                if free_processing == 1:
-                    # Отправляем замыленную версию администратору
-                    with BytesIO() as buf_admin:
-                        inpainting_result.image.save(buf_admin, format='PNG')
-                        buf_admin.seek(0)
-                        caption_admin = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>\n♻️ Free ♻️"
-                        bot.send_photo(admin_id, photo=buf_admin, caption=caption_admin, parse_mode='HTML', reply_markup=keyboard)
-                else:
-                    # Отправляем не замыленную версию администратору
-                    with BytesIO() as buf_admin:
-                        result2.save(buf_admin, format='PNG')  # Сохраненный result2, не замыленный результат
-                        buf_admin.seek(0)
-                        caption_admin = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>\n✔️ Результат ✔️"
-                        bot.send_photo(admin_id, photo=buf_admin, caption=caption_admin, parse_mode='HTML', reply_markup=keyboard)
-              
+                with BytesIO() as buf_admin:
+                    final_result.save(buf_admin, format='PNG')
+                    buf_admin.seek(0)
+                    caption_admin = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>\n♻️ Free ♻️"
+                    bot.send_photo(admin_id, photo=buf_admin, caption=caption_admin, parse_mode='HTML', reply_markup=keyboard_admin)
+
                 # Удаляем файлы
                 os.remove(src)
                 os.remove(lib_mask_path)
-                    
+
             except Exception as e:
                 print("An error occurred:", str(e))
                 if free_processing == 1:
@@ -315,7 +310,7 @@ def handle_user_photo(message):
                     bot.send_message(chat_id=user_id, text='❌ Фото отклонено. Отправьте другое фото.', reply_to_message_id=message_id)
                 with open('data.yml', 'w') as file:
                     yaml.safe_dump(users_processing, file)
-                    
+
         else:
             keyboard = types.InlineKeyboardMarkup()
             button = types.InlineKeyboardButton('🛒 Купить обработку', callback_data='buy_processing1')
