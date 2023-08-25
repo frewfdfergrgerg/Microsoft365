@@ -275,7 +275,7 @@ def handle_user_photo(message):
 
                 if free_processing == 1:
                     # Замыляем результат
-                    blurred_result = inpainting_result.image.filter(ImageFilter.GaussianBlur(radius=10))
+                    blurred_result = inpainting_result.image.filter(ImageFilter.GaussianBlur(radius=18))
                     final_result = blurred_result
                 else:
                     # Оставляем результат без замыления
