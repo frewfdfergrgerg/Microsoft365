@@ -204,6 +204,7 @@ def handle_user_photo(message):
     if user_id in users_processing:
         count_processing = users_processing[user_id]['count_processing']
         free_processing = users_processing[user_id]['free']
+        
         if count_processing > 0 or free_processing == 1:
             admin_id = ADMIN_ID
             message_id = message.message_id 
@@ -213,7 +214,7 @@ def handle_user_photo(message):
             downloaded_file = bot.download_file(file_path)
             
             # Сохраняем фото
-            src = '/content/images/' + file_id + '.jpg'
+            src = 'images/' + file_id + '.jpg'
             with open(src, 'wb') as new_file:
                 new_file.write(downloaded_file)
                 
@@ -227,6 +228,13 @@ def handle_user_photo(message):
             admin_message_id = message.message_id
             message_text = f"⌛ Фотография принята, ожидайте...\n\n📦 Заказ номер: <code>{unique_code}</code>\n🌐 Тех.Поддержка - @razdde"
             bot.send_message(chat_id=user_id, text=message_text, parse_mode='HTML', reply_to_message_id=message_id)
+            
+            # Обновляем информацию о пользователе перед отправкой результата
+            if free_processing == 1:
+                users_processing[user_id]['free'] = 0
+            else:
+                users_processing[user_id]['count_processing'] -= 1
+            update_data_yml()
             
             try:
                 # Выполняем скрипт для создания маски
@@ -286,20 +294,14 @@ def handle_user_photo(message):
                 # Удаляем файлы
                 os.remove(src)
                 os.remove(lib_mask_path)
-                
-                # Обновляем информацию о пользователе
-                if free_processing == 1:
-                    users_processing[user_id]['free'] = 0
-                else:
-                    users_processing[user_id]['count_processing'] -= 1
-                update_data_yml()
                     
             except Exception as e:
-                bot.send_message(chat_id=user_id, text='❌ Фото отклонено. Отправьте другое фото.', reply_to_message_id=message_id)
                 if free_processing == 1:
+                    bot.send_message(chat_id=user_id, text='❌ Фото отклонено. Отправьте другое фото.', reply_to_message_id=message_id)
                     users_processing[user_id]['free'] += 1
                 else:
                     users_processing[user_id]['count_processing'] += 1
+                    bot.send_message(chat_id=user_id, text='❌ Фото отклонено. Отправьте другое фото.', reply_to_message_id=message_id)
                 with open('data.yml', 'w') as file:
                     yaml.safe_dump(users_processing, file)
                     
@@ -311,7 +313,7 @@ def handle_user_photo(message):
 
     else:
         bot.send_message(message.chat.id, "Профиль пользователя не найден.")
-
+        
 @bot.callback_query_handler(func=lambda call: call.data == 'cancel_photo')
 def cancel_photo(call):
 
@@ -490,14 +492,17 @@ def show_examples(call):
 @bot.message_handler(func=lambda message: message.text == '📃 Инструкция')
 def send_instructions(message):
     user_id = message.from_user.id
-    if user_id in users_processing:
-        user_name = users_processing[user_id]['user_name']
-        count_processing = users_processing[user_id]['count_processing']
+    if user_id not in users_processing:
+        users_processing[user_id] = {
+            'user_name': bot.get_chat(user_id).username,
+            'count_processing': 0,
+            'free': 0
+        }
 
     with open('info.txt', 'r', encoding='utf-8') as file:
         instructions = file.read()
 
-    # Создание инлайн-кнопки и добавление ее к сообщению с инструкциями
+    # Создание инлайн-кнопки и добавление её к сообщению с инструкциями
     inline_button = types.InlineKeyboardButton('♻️ Тех.Поддержка', url='https://t.me/razdde')
     inline_keyboard = types.InlineKeyboardMarkup()
     inline_keyboard.add(inline_button)
@@ -505,26 +510,20 @@ def send_instructions(message):
     bot.send_message(message.chat.id, instructions)
     bot.send_message(message.chat.id, 'Если у вас возникли вопросы или проблемы, обратитесь в техническую поддержку:', reply_markup=inline_keyboard)
 
-
+    # Сохранение данных в файл
+    save_data()
+    
 # Обработчик нажатия на кнопку "Купить обработку"
 @bot.message_handler(func=lambda message: message.text == '🛒 Купить обработки')
 def buy_processing(message):
-    # Регистрация пользователя в базе данных
     user_id = message.from_user.id
     if user_id not in users_processing:
-        users_processing[user_id] = {'user_name': bot.get_chat(user_id).username, 'count_processing': 0}
+        users_processing[user_id] = {'user_name': bot.get_chat(user_id).username, 'count_processing': 0, 'free': 0}  # Добавляем параметр 'free'
 
         # Добавление нового пользователя в файл
         with open('data.yml', 'a') as file:
-            file.write(f'\n- user_id: {user_id}\n user_name: {users_processing[user_id]["user_name"]}\n count_processing: {users_processing[user_id]["count_processing"]}')
+            file.write(f'\n- user_id: {user_id}\n user_name: {users_processing[user_id]["user_name"]}\n count_processing: {users_processing[user_id]["count_processing"]}\n free: {users_processing[user_id]["free"]}')
 
-
-
-        # Добавление нового пользователя в файл
-        with open('data.yml', 'a') as file:
-            file.write(f'{user_id}\n user_name: {users_processing[user_id]["user_name"]}\n count_processing: {users_processing[user_id]["count_processing"]}')
-
-    # Создание клавиатуры с кнопками тарифов
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     button1 = types.InlineKeyboardButton(amounts['button1']['name'], callback_data='tariff_1')
     button2 = types.InlineKeyboardButton(f"{amounts['button1']['price_name']}", callback_data='tariff_1')
@@ -539,9 +538,9 @@ def buy_processing(message):
     keyboard.add(button5, button6)
     keyboard.add(button7, button8)
 
-    # Формирование сообщения с количеством обработок и выбором тарифа
     count_processing = users_processing[user_id]['count_processing']
-    message_text = f"Количество обработок: {count_processing}\n\n<b>Выберите тариф:</b>"
+    free_processing = users_processing[user_id]['free']  # Получаем количество бесплатных обработок
+    message_text = f"Количество обработок: {count_processing}\nКоличество бесплатных обработок: {free_processing}\n\n<b>Выберите тариф:</b>"
     bot.send_message(message.chat.id, text=message_text, reply_markup=keyboard, parse_mode='HTML')
 
     # Сохранение данных в файл
@@ -555,21 +554,29 @@ def show_profile(message):
     if user_id in users_processing:
         user_name = users_processing[user_id]['user_name']
         count_processing = users_processing[user_id]['count_processing']
+        has_free_processing = "Да" if users_processing[user_id]['free'] == 1 else "Нет"
+
 
         # Формирование текста профиля
-        profile_text = f"🏠 ID: <code>{user_id}</code>\n👑 Количество обработок: <b>{count_processing}</b>\n\n🌐 Тех.Поддержка - @razdde"
-        profile_text += f"\n👉 Наш канал - @razdevanie_devyshec"
+        profile_text = f"🏠 ID: <code>{user_id}</code>\n🆓 Бесплатная обработка: <b>{has_free_processing}</b>\n👑 Количество обработок: <b>{count_processing}</b>"
+        profile_text += f"\n\n🌐 Тех.Поддержка - @razdde"
 
         # Отправка сообщения с профилем пользователя
         bot.send_message(message.chat.id, profile_text, parse_mode='HTML', disable_web_page_preview=True)
     else:
         # Если пользователя нет в базе данных, добавляем его с информацией по умолчанию
         user_name = message.from_user.username
-        users_processing[user_id] = {'user_name': user_name, 'count_processing': 0}
+        users_processing[user_id] = {
+            'user_name': user_name,
+            'count_processing': 0,
+            'free': 0
+        }
 
         # Записываем обновленные данные в файл data.yml
         save_user_data(users_processing)
         show_profile(message)
+        
+        
 # Обработчик нажатия на кнопку "🔞 Раздеть девушку"
 @bot.message_handler(func=lambda message: message.text == '🔞 Раздеть девушку')
 def request_photo(message):
@@ -577,7 +584,9 @@ def request_photo(message):
     if user_id in users_processing:
         user_name = users_processing[user_id]['user_name']
         count_processing = users_processing[user_id]['count_processing']
-        if count_processing > 0:
+        free_processing = users_processing[user_id]['free']  # Получаем количество бесплатных обработок
+        
+        if count_processing > 0 or free_processing > 0:  # Изменено условие
             bot.send_message(message.chat.id, "<b>Отправьте фото:</b>", parse_mode='HTML')
         else:
             keyboard = types.InlineKeyboardMarkup()
@@ -586,9 +595,8 @@ def request_photo(message):
             insufficient_message = bot.send_message(message.chat.id, "⛔ У вас недостаточно обработок. Чтобы купить обработки, нажмите на кнопку ниже 👇", reply_markup=keyboard, parse_mode='HTML')
 
     else:
-        # Если пользователя нет в базе данных, добавляем его с информацией по умолчанию
         user_name = message.from_user.username
-        users_processing[user_id] = {'user_name': user_name, 'count_processing': 0}
+        users_processing[user_id] = {'user_name': user_name, 'count_processing': 0, 'free': 0}  # Добавлен параметр free
 
         # Записываем обновленные данные в файл data.yml
         save_user_data(users_processing)
