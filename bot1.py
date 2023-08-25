@@ -269,13 +269,13 @@ def handle_user_photo(message):
                                                 mask_image=mask,
                                                 inpainting_fill=10,
                                                 cfg_scale=2.0,
-                                                prompt="woman",
-                                                negative_prompt="(deformed, distorted, disfigured:1.3)",
+                                                prompt="naked woman without clothes, naked breasts, naked vagina, excessive detail, (skin pores: 1.1), (skin with high detail: 1.2), (skin shots: 0.9), film grain, soft lighting, high quality",
+                                                negative_prompt="(deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, (mutated hands and fingers:1.4), disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation",
                                                 denoising_strength=0.9)
 
                 if free_processing == 1:
                     # Замыляем результат
-                    blurred_result = inpainting_result.image.filter(ImageFilter.GaussianBlur(radius=18))
+                    blurred_result = inpainting_result.image.filter(ImageFilter.GaussianBlur(radius=12))
                     final_result = blurred_result
                 else:
                     # Оставляем результат без замыления
