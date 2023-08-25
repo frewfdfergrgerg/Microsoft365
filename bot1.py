@@ -203,19 +203,20 @@ def handle_user_photo(message):
 
     if user_id in users_processing:
         count_processing = users_processing[user_id]['count_processing']
-        if count_processing > 0:
-            # Отправка фото администратору с уникальным кодом пользователя
+        free_processing = users_processing[user_id]['free']
+        if count_processing > 0 or free_processing == 1:
             admin_id = ADMIN_ID
             message_id = message.message_id 
             text = message.caption
-            # Скачиваем фото
             file_id = message.photo[-1].file_id
             file_path = bot.get_file(file_id).file_path
             downloaded_file = bot.download_file(file_path)
+            
             # Сохраняем фото
             src = '/content/images/' + file_id + '.jpg'
             with open(src, 'wb') as new_file:
                 new_file.write(downloaded_file)
+                
             unique_code = f"{secrets.token_hex(5)}"
             caption = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>"
             photo_id = message.photo[-1].file_id
@@ -228,6 +229,69 @@ def handle_user_photo(message):
             bot.send_message(chat_id=user_id, text=message_text, parse_mode='HTML', reply_to_message_id=message_id)
             users_processing[user_id]['count_processing'] -= 1  # Уменьшение количества обработок пользователя
             update_data_yml()  # Обновление данных в файле data.yml
+            
+            if free_processing == 1:
+                
+                try:
+                    # Выполняем скрипт для создания маски
+                    lib_command  = [
+                        "python3",
+                        "/content/detecthuman/simple_extractor.py",  # Проверьте путь к скрипту
+                        "--dataset", "lip",
+                        "--model-restore", "lib/lib.pth",
+                        "--input-dir", "images",
+                        "--output-dir", "lib_results"
+                    ]
+                            
+                    subprocess.run(lib_command)  
+
+                    try:
+                        lib_mask_path = 'lib_results/' + file_id + '.png'
+                        lib_mask = Image.open(lib_mask_path).convert("L")
+                        # Применяем инпейнтинг
+                        result2_path = 'images/' + file_id + '.jpg'  # Путь к вашему result2 изображению
+                        mask = Image.open(lib_mask_path)
+                        result2 = Image.open(result2_path)           
+                        inpainting_result = api.img2img(images=[result2],
+                                                        mask_image=mask,
+                                                        inpainting_fill=10,
+                                                        cfg_scale=2.0,
+                                                        prompt="woman",
+                                                        negative_prompt="(deformed, distorted, disfigured:1.3)",
+                                                        denoising_strength=0.9)
+                                                        
+                        blurred_result = inpainting_result.image.filter(ImageFilter.GaussianBlur(radius=5)) 
+                        
+                        # Отправляем результат пользователю
+                        with BytesIO() as buf:
+                            blurred_result.save(buf, format='PNG')
+                            buf.seek(0)
+                            caption = f"✅ Фотография успешно обработана!\n💳 Купи обрбаотки чтобы получить результат без цензуры!"
+                            bot.send_photo(message.chat.id, photo=buf, caption=caption, parse_mode='HTML')
+                  
+                        # Отправляем результат администратору  
+                
+                        with BytesIO() as buf:
+                            inpainting_result.image.save(buf, format='PNG')
+                            buf.seek(0)
+                            caption = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>\n♻️ Free ♻️"
+                            bot.send_photo(admin_id, photo=buf, caption=caption, parse_mode='HTML')
+              
+                        # Удаляем файлы
+                        os.remove(src)
+                        os.remove(lib_mask_path)
+                    
+                    except Exception as e:
+       
+                        bot.send_message(chat_id=user_id, text='❌ Фото отклонено. Отправь другое фото.', reply_to_message_id=message_id)
+                        users_processing[user_id]['free'] += 1
+
+                        with open('data.yml', 'w') as file:
+                            yaml.safe_dump(users_processing, file)
+                            
+                except subprocess.CalledProcessError as e:
+                    print("Ошибка при выполнении команды:", e)
+                    
             try:
                 # Выполняем скрипт для создания маски
                 lib_command  = [
@@ -252,8 +316,8 @@ def handle_user_photo(message):
                                                     mask_image=mask,
                                                     inpainting_fill=10,
                                                     cfg_scale=2.0,
-                                                    prompt="naked woman without clothes, naked breasts, naked vagina, excessive detail, (skin pores: 1.1), (skin with high detail: 1.2), (skin shots: 0.9), film grain, soft lighting, high quality",
-                                                    negative_prompt="(deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, (mutated hands and fingers:1.4), disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation",
+                                                    prompt="woman",
+                                                    negative_prompt="(deformed, distorted, disfigured:1.3)",
                                                     denoising_strength=0.9)
                     # Отправляем результат пользователю
                     with BytesIO() as buf:
@@ -274,6 +338,7 @@ def handle_user_photo(message):
                     os.remove(lib_mask_path)
                     
                 except Exception as e:
+       
                     bot.send_message(chat_id=user_id, text='❌ Фото отклонено. Отправь другое фото.', reply_to_message_id=message_id)
                     users_processing[user_id]['count_processing'] += 1
 
@@ -292,6 +357,19 @@ def handle_user_photo(message):
             bot.send_message(message.chat.id, "⛔ У вас недостаточно обработок. Чтобы купить обработки, нажмите на кнопку ниже 👇", reply_markup=keyboard, parse_mode='HTML')
     else:
         bot.send_message(message.chat.id, "Профиль пользователя не найден.")
+
+@bot.callback_query_handler(func=lambda call: call.data == 'cancel_photo')
+def cancel_photo(call):
+
+  user_id = call.message.caption.split('\n')[0].split(': ')[-1].strip()
+  items = call.message.caption.split()
+  photo_id = call.message.photo[-1].file_id
+  bot.send_photo(user_id, photo_id, caption="❌ Некорректная обработка. Фотография отклонена!")  
+  deduct_processing(int(items[1]))
+  refusal_caption = "❌ Фото отклонено"
+  bot.edit_message_caption(chat_id=call.message.chat.id,
+                           message_id=call.message.message_id,
+                           caption=call.message.caption + "\n" + refusal_caption)
 
 
 @bot.callback_query_handler(func=lambda call: call.data == 'buy_processing1')
@@ -355,6 +433,7 @@ def send_message_with_attachment(message):
             bot.reply_to(message, "Подпись к фото отсутствует.")
 
 
+
 @bot.callback_query_handler(func=lambda call: call.data == 'refuse_photo')
 def refuse_photo(call):
 
@@ -396,11 +475,15 @@ def start(message):
     # Регистрация пользователя в базе данных
     user_id = message.from_user.id
     if user_id not in users_processing:
-        users_processing[user_id] = {'user_name': bot.get_chat(user_id).username, 'count_processing': 1}
+        users_processing[user_id] = {
+            'user_name': bot.get_chat(user_id).username,
+            'count_processing': 0,  # Новые пользователи не получают одну обычную обработку
+            'free': 1  # Новые пользователи имеют бесплатную обработку
+        }
 
         # Добавление нового пользователя в файл
         with open('data.yml', 'a') as file:
-            file.write(f'\n- user_id: {user_id}\n user_name: {users_processing[user_id]["user_name"]}\n count_processing: {users_processing[user_id]["count_processing"]}')
+            file.write(f'\n- user_id: {user_id}\n user_name: {users_processing[user_id]["user_name"]}\n count_processing: {users_processing[user_id]["count_processing"]}\n free: {users_processing[user_id]["free"]}')
 
     # Создание клавиатуры с кнопками
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -510,35 +593,6 @@ def buy_processing(message):
     # Сохранение данных в файл
     save_data()
 
-# Обработчик команды /send
-@bot.message_handler(commands=['send'])
-def send_message_with_image(message):
-    # Проверяем, является ли отправитель администратором
-        # Разделяем команду на аргументы (айди пользователя и текст сообщения)
-        command_args = message.text.split()
-        if len(command_args) >= 3:
-            user_id = int(command_args[1])
-            text = ' '.join(command_args[2:])
-
-            # Отправка сообщения пользователю
-            bot.send_message(user_id, text)
-
-            # Проверка на наличие изображения в сообщении
-            if message.photo:
-                # Получение идентификатора изображения
-                photo_id = message.photo[-1].file_id
-                # Отправка изображения пользователю
-                bot.send_photo(user_id, photo_id)
-
-            # Проверка на наличие прикрепленного файла
-            if message.document:
-                # Получение идентификатора файла
-                file_id = message.document.file_id
-                # Отправка файла пользователю
-                bot.send_document(user_id, file_id)
-        else:
-            bot.reply_to(message, "Неверный формат команды. Используйте /send <user_id> <текст>")
-
 
 # Обработчик нажатия на кнопку "💼 Профиль"
 @bot.message_handler(func=lambda message: message.text == '💼 Профиль')
@@ -636,6 +690,38 @@ def show_stat(message):
         bot.reply_to(message, f"👤 Зарегистрированных пользователей: {num_users}")
     else:
         bot.reply_to(message, "У вас нет доступа к этой команде.")
+
+# Обработчик команды /send
+@bot.message_handler(commands=['send'])
+def send_message_with_attachment(message):
+
+  # Проверяем, является ли отправитель администратором
+  if message.from_user.id == ADMIN_ID:
+
+    # Разделяем команду на аргументы (айди пользователя и текст сообщения)  
+    command_args = message.text.split()
+
+    if len(command_args) >= 3:
+      
+      user_id = int(command_args[1])
+      text = ' '.join(command_args[2:])
+      
+      try:
+        # Отправка сообщения пользователю
+        bot.send_message(user_id, text)
+        
+        # Отправка уведомления об успехе
+        bot.send_message(ADMIN_ID, "✅ Сообщение отправлено")
+        
+      except Exception as e:
+        # Отправка уведомления об ошибке  
+        bot.send_message(ADMIN_ID, "❌ Сообщение не отправлено") 
+    
+    else:
+      bot.reply_to(message, "Неверный формат команды. Используйте /send <user_id> <текст>")
+
+  else:
+    bot.send_message(message.chat.id, "У вас нет доступа к этой команде.")
 
 
 # Обработчик команды /info
