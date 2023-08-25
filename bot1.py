@@ -265,7 +265,7 @@ def handle_user_photo(message):
                                                 
                 if free_processing == 1:
                     # Замыляем результат
-                    blurred_result = inpainting_result.image.filter(ImageFilter.GaussianBlur(radius=5))
+                    blurred_result = inpainting_result.image.filter(ImageFilter.GaussianBlur(radius=10))
                     final_result = blurred_result
                 else:
                     # Оставляем результат без замыления
@@ -276,10 +276,14 @@ def handle_user_photo(message):
                     final_result.save(buf, format='PNG')
                     buf.seek(0)
                     if free_processing == 1:
-                        caption = f"✅ Фотография успешно обработана!\n💳 Купите обработки, чтобы получить результат без цензуры."
+                        caption = f"✅ Фотография успешно обработана!\n\n🔑 Купите обработки, чтобы получить результат без цензуры 👇"
+                        # Добавляем инлайн-кнопку "Купить обработку" к сообщению с результатом
+                        buy_button = types.InlineKeyboardButton('🛒 Купить обработку', callback_data='buy_processing1')
+                        keyboard.add(buy_button)
+                        bot.send_photo(message.chat.id, photo=buf, caption=caption, parse_mode='HTML', reply_markup=keyboard)
                     else:
                         caption = "✅ Фотография успешно обработана!"
-                    bot.send_photo(message.chat.id, photo=buf, caption=caption, parse_mode='HTML')
+                        bot.send_photo(message.chat.id, photo=buf, caption=caption, parse_mode='HTML')
                   
                 # Отправляем результат администратору  
                 with BytesIO() as buf:
