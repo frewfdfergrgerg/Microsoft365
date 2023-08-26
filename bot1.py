@@ -234,16 +234,14 @@ def handle_user_photo(message):
             
             if count_processing > 0:
                 # Замыляем результат
-                photo_result = not_censorship
+                photo_result = "not_censorship"
                 # Обновляем информацию о пользователе перед отправкой результата
                 users_processing[user_id]['free'] = 0
                 users_processing[user_id]['count_processing'] -= 1   
                 update_data_yml()
             else:
                 # Оставляем результат без замыления                  
-                blurred_result = inpainting_result.image.filter(ImageFilter.GaussianBlur(radius=10))
-                photo_result = censorship
-                    
+                photo_result = "censorship"
                 # Обновляем информацию о пользователе перед отправкой результата
                 users_processing[user_id]['free'] = 0
                 update_data_yml()             
@@ -285,7 +283,7 @@ def handle_user_photo(message):
 
                 # Отправляем результат пользователю
                 with BytesIO() as buf:
-                    if photo_result == not_censorship:
+                    if photo_result == "not_censorship":
                         final_result = inpainting_result.image
                         caption = f"✅ Фотография успешно обработана!"
                     else:
@@ -310,12 +308,13 @@ def handle_user_photo(message):
 
             except Exception as e:
                 print("An error occurred:", str(e))
-                if free_processing == 1:
-                    bot.send_message(chat_id=user_id, text='❌ Фото отклонено. Отправьте другое фото.', reply_to_message_id=message_id)
-                    users_processing[user_id]['free'] += 1
-                else:
+                if photo_result == "not_censorship":
                     users_processing[user_id]['count_processing'] += 1
+                    bot.send_message(chat_id=user_id, text='❌ Фото отклонено. Отправьте другое фото.', reply_to_message_id=message_id) 
+                if photo_result == "censorship":
+                    users_processing[user_id]['free'] += 1
                     bot.send_message(chat_id=user_id, text='❌ Фото отклонено. Отправьте другое фото.', reply_to_message_id=message_id)
+                          
                 with open('data.yml', 'w') as file:
                     yaml.safe_dump(users_processing, file)
 
