@@ -270,8 +270,8 @@ def handle_user_photo(message):
                                                 mask_image=mask,
                                                 inpainting_fill=10,
                                                 cfg_scale=2.0,
-                                                prompt="woman",
-                                                negative_prompt="(deformed, distorted, disfigured:1.3)",
+                                                prompt="naked woman without clothes, naked breasts, naked vagina, excessive detail, (skin pores: 1.1), (skin with high detail: 1.2), (skin shots: 0.9), film grain, soft lighting, high quality",
+                                                negative_prompt="(deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, (mutated hands and fingers:1.4), disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation",
                                                 denoising_strength=0.9)
 
 
@@ -792,9 +792,10 @@ def handle_tariff_selection(call):
                 other_payment_button = types.InlineKeyboardButton('♻️ Другое', callback_data='other_payment')
                 keyboard.add(card_payment_button)
                 keyboard.add(other_payment_button)
+                bot.delete_message(call.message.chat.id, call.message.message_id)
                 payment_message = bot.send_message(user_id, message_text, reply_markup=keyboard, parse_mode='HTML')
                 payment_message_id = payment_message.message_id
-                bot.delete_message(call.message.chat.id, call.message.message_id)
+                
 
                 # Проверка успешности платежа в отдельном потоке
                 payment_status_thread = threading.Thread(target=check_payment_status_thread, args=(token, label, user_id, count_processing, payment_message, payment_message_id))
