@@ -228,7 +228,7 @@ def handle_user_photo(message):
 
             keyboard_user = types.InlineKeyboardMarkup()
             if free_processing == 1:
-                buy_button = types.InlineKeyboardButton('🛒 Купить обработку', callback_data='buy_processing1')
+                buy_button = types.InlineKeyboardButton('🛒 Купить обработки', callback_data='buy_processing2')
                 keyboard_user.add(buy_button)
 
             # Отправляем фото администратору с соответствующей клавиатурой
@@ -317,7 +317,7 @@ def handle_user_photo(message):
 
         else:
             keyboard = types.InlineKeyboardMarkup()
-            button = types.InlineKeyboardButton('🛒 Купить обработку', callback_data='buy_processing1')
+            button = types.InlineKeyboardButton('🛒 Купить обработки', callback_data='buy_processing1')
             keyboard.add(button)
             bot.send_message(message.chat.id, "⛔ У вас недостаточно обработок. Чтобы купить обработки, нажмите на кнопку ниже 👇", reply_markup=keyboard, parse_mode='HTML')
 
