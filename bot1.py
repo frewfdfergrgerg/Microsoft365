@@ -143,23 +143,28 @@ def give_processing(message):
             if user_id in users_processing:
                 users_processing[user_id]['count_processing'] += processing_count  # Увеличение количества обработок пользователя
             else:
-                users_processing[user_id] = {'user_name': bot.get_chat(user_id).username, 'count_processing': processing_count}
-
+                users_processing[user_id] = {
+                    'user_name':bot.get_chat(user_id).username,
+                    'count_processing': processing_count,
+                    'free': 0
+                }
             update_data_yml()  # Обновление данных в файле data.yml
 
-            # Отправка сообщения администратору о успешной выдаче обработок
-            admin_message = f"✅ Пользователю с ID {user_id} было выдано {processing_count} обработок. Текущее количество обработок: {users_processing[user_id]['count_processing']}"
-            bot.reply_to(message, admin_message)
-
-            # Отправка сообщения пользователю о получении обработок
-            user_message = f"✅ Получено <code>{processing_count}</code> обработок.\n🏠 У вас: <code>{users_processing[user_id]['count_processing']}</code> обработок"
-            bot.send_message(chat_id=user_id, text=user_message, parse_mode='HTML')
+            try:
+                # Отправка сообщения пользователю о получении обработок
+                user_message = f"✅ Получено <code>{processing_count}</code> обработок.\n🏠 У вас: <code>{users_processing[user_id]['count_processing']}</code> обработок"
+                bot.send_message(chat_id=user_id, text=user_message, parse_mode='HTML')
+                admin_message = f"✅ ID {user_id} выдано {processing_count} обработок. Текущее количество обработок: {users_processing[user_id]['count_processing']}"
+                bot.reply_to(message, admin_message)
+            except Exception as e:
+                admin_message = f"(не зареган) ✅  ID {user_id} выдано {processing_count} обработок. Текущее количество обработок: {users_processing[user_id]['count_processing']}"
+                bot.reply_to(message, admin_message)
         else:
             bot.reply_to(message, "Неверный формат команды. Используйте /give <user_id> <количество>")
     else:
         bot.reply_to(message, "У вас нет доступа к этой команде.")
 
-@bot.message_handler(commands=['give1'])
+@bot.message_handler(commands=['give'])
 def give_processing(message):
     # Проверяем, является ли отправитель администратором
     if message.from_user.id == ADMIN_ID:
@@ -172,19 +177,24 @@ def give_processing(message):
             if user_id in users_processing:
                 users_processing[user_id]['count_processing'] += processing_count  # Увеличение количества обработок пользователя
             else:
-                users_processing[user_id] = {'user_name': bot.get_chat(user_id).username, 'count_processing': processing_count}
-
+                users_processing[user_id] = {
+                    'user_name':bot.get_chat(user_id).username,
+                    'count_processing': processing_count,
+                    'free': 0
+                }
             update_data_yml()  # Обновление данных в файле data.yml
 
-            # Отправка сообщения администратору о успешной выдаче обработок
-            admin_message = f"✅ Пользователю с ID {user_id} было выдано {processing_count} обработок. Текущее количество обработок: {users_processing[user_id]['count_processing']}"
-            bot.reply_to(message, admin_message)
-
+            try:
+                # Отправка сообщения пользователю о получении обработок
+                admin_message = f"(без звука) ✅ ID {user_id} выдано {processing_count} обработок. Текущее количество обработок: {users_processing[user_id]['count_processing']}"
+                bot.reply_to(message, admin_message)
+            except Exception as e:
+                admin_message = f"(без звука) (не зареган) ✅  ID {user_id} выдано {processing_count} обработок. Текущее количество обработок: {users_processing[user_id]['count_processing']}"
+                bot.reply_to(message, admin_message)
         else:
-            bot.reply_to(message, "Неверный формат команды. Используйте /give1 <user_id> <количество>")
+            bot.reply_to(message, "Неверный формат команды. Используйте /give <user_id> <количество>")
     else:
         bot.reply_to(message, "У вас нет доступа к этой команде.")
-
 
 @bot.message_handler(content_types=['photo'], func=lambda message: message.from_user.id == ADMIN_ID)
 def handle_admin_photo(message):
