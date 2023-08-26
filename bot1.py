@@ -220,7 +220,6 @@ def handle_user_photo(message):
 
             unique_code = f"{secrets.token_hex(5)}"
             caption = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>"
-            photo_id = message.photo[-1].file_id
 
             # Создаем клавиатуры для администратора и пользователя
             keyboard_admin = types.InlineKeyboardMarkup()
@@ -229,7 +228,7 @@ def handle_user_photo(message):
 
             keyboard_user = types.InlineKeyboardMarkup()
             if free_processing == 1:
-                buy_button = types.InlineKeyboardButton('🛒 Купить обработку', callback_data='buy_processing2')
+                buy_button = types.InlineKeyboardButton('🛒 Купить обработку', callback_data='buy_processing1')
                 keyboard_user.add(buy_button)
 
             # Отправляем фото администратору с соответствующей клавиатурой
@@ -238,13 +237,6 @@ def handle_user_photo(message):
             admin_message_id = message.message_id
             message_text = f"⌛ Фотография принята, ожидайте...\n\n📦 Заказ номер: <code>{unique_code}</code>\n🌐 Тех.Поддержка - @razdde"
             bot.send_message(chat_id=user_id, text=message_text, parse_mode='HTML', reply_to_message_id=message_id)
-
-            # Обновляем информацию о пользователе перед отправкой результата
-            if free_processing == 1:
-                users_processing[user_id]['free'] = 0
-            else:
-                users_processing[user_id]['count_processing'] -= 1
-            update_data_yml()
 
             try:
                 # Выполняем скрипт для создания маски
@@ -269,23 +261,35 @@ def handle_user_photo(message):
                                                 mask_image=mask,
                                                 inpainting_fill=10,
                                                 cfg_scale=2.0,
-                                                prompt="naked woman without clothes, naked breasts, naked vagina, excessive detail, (skin pores: 1.1), (skin with high detail: 1.2), (skin shots: 0.9), film grain, soft lighting, high quality",
-                                                negative_prompt="(deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, (mutated hands and fingers:1.4), disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation",
+                                                prompt="woman",
+                                                negative_prompt="(deformed, distorted, disfigured:1.3)",
                                                 denoising_strength=0.9)
 
-                if free_processing == 1:
+                if count_processing > 0:
                     # Замыляем результат
-                    blurred_result = inpainting_result.image.filter(ImageFilter.GaussianBlur(radius=7))
-                    final_result = blurred_result
-                else:
-                    # Оставляем результат без замыления
                     final_result = inpainting_result.image
+                    
+                    # Обновляем информацию о пользователе перед отправкой результата
+                    users_processing[user_id]['free'] = 0
+                    users_processing[user_id]['count_processing'] -= 1
+                    update_data_yml()
+                else:
+                    # Оставляем результат без замыления                  
+                    blurred_result = inpainting_result.image.filter(ImageFilter.GaussianBlur(radius=10))
+                    final_result = blurred_result
+                    
+                    # Обновляем информацию о пользователе перед отправкой результата
+                    users_processing[user_id]['free'] = 0
+                    update_data_yml()
 
                 # Отправляем результат пользователю
                 with BytesIO() as buf:
                     final_result.save(buf, format='PNG')
                     buf.seek(0)
-                    caption = f"✅ Фотография успешно обработана!\n\n💳 Купите обработки, чтобы получить результат без цензуры 👇"
+                    if count_processing > 0:
+                        caption = f"✅ Фотография успешно обработана!"
+                    else:
+                        caption = f"✅ Фотография успешно обработана!\n\n💳 Купите обработки, чтобы получить результат без цензуры 👇"
                     # Добавляем инлайн-кнопку "Купить обработку" к сообщению с результатом
                     bot.send_photo(message.chat.id, photo=buf, caption=caption, parse_mode='HTML', reply_markup=keyboard_user)
 
