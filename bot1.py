@@ -234,16 +234,15 @@ def handle_user_photo(message):
             
             if count_processing > 0:
                 # Замыляем результат
-                final_result = inpainting_result.image
-                    
+                photo_result = not_censorship
                 # Обновляем информацию о пользователе перед отправкой результата
                 users_processing[user_id]['free'] = 0
-                users_processing[user_id]['count_processing'] -= 1
+                users_processing[user_id]['count_processing'] -= 1   
                 update_data_yml()
             else:
                 # Оставляем результат без замыления                  
                 blurred_result = inpainting_result.image.filter(ImageFilter.GaussianBlur(radius=10))
-                final_result = blurred_result
+                photo_result = censorship
                     
                 # Обновляем информацию о пользователе перед отправкой результата
                 users_processing[user_id]['free'] = 0
@@ -286,13 +285,16 @@ def handle_user_photo(message):
 
                 # Отправляем результат пользователю
                 with BytesIO() as buf:
-                    final_result.save(buf, format='PNG')
-                    buf.seek(0)
-                    if count_processing > 0:
+                    if photo_result == not_censorship:
+                        final_result = inpainting_result.image
                         caption = f"✅ Фотография успешно обработана!"
                     else:
+                        blurred_result = inpainting_result.image.filter(ImageFilter.GaussianBlur(radius=10))
+                        final_result = blurred_result
                         caption = f"✅ Фотография успешно обработана!\n\n💳 Купите обработки, чтобы получить результат без цензуры 👇"
                     # Добавляем инлайн-кнопку "Купить обработку" к сообщению с результатом
+                    final_result.save(buf, format='PNG')
+                    buf.seek(0)
                     bot.send_photo(message.chat.id, photo=buf, caption=caption, parse_mode='HTML', reply_markup=keyboard_user)
 
                 # Отправляем результат администратору
