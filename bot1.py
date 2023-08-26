@@ -95,6 +95,8 @@ def check_payment_status(token, label):
 
 # Функция отправки сообщения об успешной оплате
 def send_payment_success_message(chat_id, count_processing):
+    message_text = f"✅ Платеж успешный.\n💰 Пополнение на: <code>{count_processing}</code> обработок\n\n🏠 У вас: <code>{users_processing[chat_id]['count_processing']}</code> обработок"
+    bot.send_message(chat_id, text=message_text, parse_mode='HTML')
     # Уменьшение количества обработок в зависимости от тарифа
     if count_processing == 5:
         count_processing -= 5
@@ -114,21 +116,13 @@ def send_payment_success_message(chat_id, count_processing):
     with open('data.yml', 'w') as file:
         yaml.safe_dump(users_processing, file)
 
-    # Удаление сообщения с ссылкой на оплату
-    if 'payment_message_id' in users_processing[chat_id]:
-        try:
-            bot.delete_message(chat_id, users_processing[chat_id]['payment_message_id'])
-        except Exception as e:
-            print(f"Ошибка удаления сообщения: {str(e)}")
-
-    # Отправка сообщения об успешной оплате
-    message_text = f"✅ Платеж успешный. Количество обработок: {users_processing[chat_id]['count_processing']}"
-    bot.send_message(chat_id, message_text)
-
+            
     # Отправка дополнительного сообщения администратору
     admin_chat_id = ADMIN_ID  # Замените на переменную, содержащую идентификатор администратора
     admin_message_text = f"Пользователь {chat_id} (@{users_processing[chat_id]['user_name']}) совершил успешный платеж.\nКоличество обработок: {users_processing[chat_id]['count_processing']}"
     bot.send_message(admin_chat_id, admin_message_text)
+    
+    update_data_yml()
 
 
 # Функция сохранения данных в файл data.yml
@@ -748,14 +742,16 @@ def show_user_info(message):
 
 
 # Функция проверки статуса платежа в отдельном потоке
-def check_payment_status_thread(token, label, user_id, count_processing):
+def check_payment_status_thread(token, label, user_id, count_processing, payment_message, payment_message_id):
     if check_payment_status(token, label):
         # Начисление обработок и отправка сообщения об успешной оплате
         users_processing[user_id]['count_processing'] += count_processing
         send_payment_success_message(user_id, count_processing)
+        bot.delete_message(chat_id=user_id, message_id=payment_message_id)
         print("Платеж успешный")
     else:
         bot.send_message(user_id, "Платеж неуспешный. Пожалуйста, попробуйте еще раз.")
+        bot.delete_message(chat_id=user_id, message_id=payment_message_id)
         print("Платеж неуспешный")
 
 
@@ -797,10 +793,11 @@ def handle_tariff_selection(call):
                 keyboard.add(card_payment_button)
                 keyboard.add(other_payment_button)
                 payment_message = bot.send_message(user_id, message_text, reply_markup=keyboard, parse_mode='HTML')
+                payment_message_id = payment_message.message_id
                 bot.delete_message(call.message.chat.id, call.message.message_id)
 
                 # Проверка успешности платежа в отдельном потоке
-                payment_status_thread = threading.Thread(target=check_payment_status_thread, args=(token, label, user_id, count_processing))
+                payment_status_thread = threading.Thread(target=check_payment_status_thread, args=(token, label, user_id, count_processing, payment_message, payment_message_id))
                 payment_status_thread.start()
             else:
                 bot.send_message(user_id, "Ошибка при создании платежа. Пожалуйста, попробуйте еще раз.")
