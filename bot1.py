@@ -158,8 +158,8 @@ def give_processing(message):
             bot.reply_to(message, admin_message)
 
             # Отправка сообщения пользователю о получении обработок
-            user_message = f"✅ Вы получили {processing_count} обработок. Текущее количество обработок: {users_processing[user_id]['count_processing']}"
-            bot.send_message(user_id, user_message)
+            user_message = f"✅ Получено <code>{processing_count}</code> обработок.\n🏠 У вас: <code>{users_processing[user_id]['count_processing']}</code> обработок"
+            bot.send_message(chat_id=user_id, text=user_message, parse_mode='HTML')
         else:
             bot.reply_to(message, "Неверный формат команды. Используйте /give <user_id> <количество>")
     else:
@@ -219,7 +219,7 @@ def handle_user_photo(message):
                 new_file.write(downloaded_file)
 
             unique_code = f"{secrets.token_hex(5)}"
-            caption = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>"
+            caption = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>\nОбработок: <code>{users_processing[user_id]['count_processing']}</code>"
 
             # Создаем клавиатуры для администратора и пользователя
             keyboard_admin = types.InlineKeyboardMarkup()
@@ -297,7 +297,7 @@ def handle_user_photo(message):
                 with BytesIO() as buf_admin:
                     final_result.save(buf_admin, format='PNG')
                     buf_admin.seek(0)
-                    caption_admin = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>\n♻️ Free ♻️"
+                    caption_admin = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>\nОбработок: <code>{users_processing[user_id]['count_processing']}</code>\n♻️Результат♻️"
                     bot.send_photo(admin_id, photo=buf_admin, caption=caption_admin, parse_mode='HTML', reply_markup=keyboard_admin)
 
                 # Удаляем файлы
