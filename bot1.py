@@ -325,7 +325,7 @@ def handle_user_photo(message):
             bot.send_message(message.chat.id, "⛔ У вас недостаточно обработок. Чтобы купить обработки, нажмите на кнопку ниже 👇", reply_markup=keyboard, parse_mode='HTML')
 
     else:
-        bot.send_message(message.chat.id, "Профиль пользователя не найден.")
+        bot.send_message(message.chat.id, "Требуется перезагрузка - /start")
         
 @bot.callback_query_handler(func=lambda call: call.data == 'cancel_photo')
 def cancel_photo(call):
@@ -463,7 +463,7 @@ def deduct_processing(user_id):
        bot.send_message(user_id, message_text)
 
     else:
-       bot.send_message(user_id, "Профиль пользователя не найден.")
+       bot.send_message(user_id, "Требуется перезагрузка - /start")
        
 
 
@@ -740,7 +740,7 @@ def show_user_info(message):
                 user_info_text = f"ID пользователя: <code>{user_id}</code>\nНик пользователя: @{user_name}\nКоличество обработок: <b>{count_processing}</b>"
                 bot.send_message(message.chat.id, user_info_text, parse_mode='HTML')
             else:
-                bot.send_message(message.chat.id, "Профиль пользователя не найден.")
+                bot.send_message(message.chat.id, "Требуется перезагрузка - /start")
         else:
             bot.send_message(message.chat.id, "Неверный формат команды. Используйте /info <user_id>")
     else:
