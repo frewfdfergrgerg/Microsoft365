@@ -468,7 +468,7 @@ def start(message):
     if user_id not in users_processing:
         users_processing[user_id] = {
             'user_name': bot.get_chat(user_id).username,
-            'count_processing': 0,  # Новые пользователи не получают одну обычную обработку
+            'count_processing': 3,  # Новые пользователи не получают одну обычную обработку
             'free': 1  # Новые пользователи имеют бесплатную обработку
         }
 
