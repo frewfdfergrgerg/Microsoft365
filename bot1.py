@@ -221,16 +221,34 @@ def handle_user_photo(message):
             unique_code = f"{secrets.token_hex(5)}"
             caption = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>\nОбработок: <code>{users_processing[user_id]['count_processing']}</code>"
 
+
+                
             # Создаем клавиатуры для администратора и пользователя
             keyboard_admin = types.InlineKeyboardMarkup()
             refuse_button = types.InlineKeyboardButton('Отказать', callback_data='refuse_photo')
             keyboard_admin.add(refuse_button)
 
             keyboard_user = types.InlineKeyboardMarkup()
-            if free_processing == 1:
-                buy_button = types.InlineKeyboardButton('🛒 Купить обработки', callback_data='buy_processing2')
-                keyboard_user.add(buy_button)
-
+            buy_button = types.InlineKeyboardButton('🛒 Купить обработки', callback_data='buy_processing2')
+            keyboard_user.add(buy_button)
+            
+            if count_processing > 0:
+                # Замыляем результат
+                final_result = inpainting_result.image
+                    
+                # Обновляем информацию о пользователе перед отправкой результата
+                users_processing[user_id]['free'] = 0
+                users_processing[user_id]['count_processing'] -= 1
+                update_data_yml()
+            else:
+                # Оставляем результат без замыления                  
+                blurred_result = inpainting_result.image.filter(ImageFilter.GaussianBlur(radius=10))
+                final_result = blurred_result
+                    
+                # Обновляем информацию о пользователе перед отправкой результата
+                users_processing[user_id]['free'] = 0
+                update_data_yml()             
+                
             # Отправляем фото администратору с соответствующей клавиатурой
             bot.send_photo(admin_id, message.photo[-1].file_id, caption=caption, parse_mode='HTML', reply_markup=keyboard_admin)
 
@@ -265,22 +283,6 @@ def handle_user_photo(message):
                                                 negative_prompt="(deformed, distorted, disfigured:1.3)",
                                                 denoising_strength=0.9)
 
-                if count_processing > 0:
-                    # Замыляем результат
-                    final_result = inpainting_result.image
-                    
-                    # Обновляем информацию о пользователе перед отправкой результата
-                    users_processing[user_id]['free'] = 0
-                    users_processing[user_id]['count_processing'] -= 1
-                    update_data_yml()
-                else:
-                    # Оставляем результат без замыления                  
-                    blurred_result = inpainting_result.image.filter(ImageFilter.GaussianBlur(radius=10))
-                    final_result = blurred_result
-                    
-                    # Обновляем информацию о пользователе перед отправкой результата
-                    users_processing[user_id]['free'] = 0
-                    update_data_yml()
 
                 # Отправляем результат пользователю
                 with BytesIO() as buf:
