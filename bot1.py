@@ -588,11 +588,9 @@ def show_profile(message):
     if user_id in users_processing:
         user_name = users_processing[user_id]['user_name']
         count_processing = users_processing[user_id]['count_processing']
-        has_free_processing = "Да" if users_processing[user_id]['free'] == 1 else "Нет"
-
 
         # Формирование текста профиля
-        profile_text = f"🏠 ID: <code>{user_id}</code>\n🆓 Бесплатная обработка: <b>{has_free_processing}</b>\n👑 Количество обработок: <b>{count_processing}</b>"
+        profile_text = f"🏠 ID: <code>{user_id}</code>\n👑 Количество обработок: <b>{count_processing}</b>"
         profile_text += f"\n\n🌐 Тех.Поддержка - @razdde"
 
         # Отправка сообщения с профилем пользователя
