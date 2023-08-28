@@ -473,46 +473,74 @@ def deduct_processing(user_id):
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    # Регистрация пользователя в базе данных
     user_id = message.from_user.id
+    
     if user_id not in users_processing:
-        users_processing[user_id] = {
-            'user_name': bot.get_chat(user_id).username,
-            'count_processing': 0,  # Новые пользователи не получают одну обычную обработку
-            'free': 1  # Новые пользователи имеют бесплатную обработку
-        }
+        # Пользователя нет в базе данных, записываем его
+        
+        # Отправляем сообщение с соглашением и кнопкой подтверждения
+        agreement_text = (
+            '🔞 Вам необходимо ознакомиться с пользовательским соглашением и подтвердить, что Вам уже исполнилось 18 лет.\n\n'
+            '✅ Кнопка "Я согласен" подтверждает ваше согласие с вышеперечисленным.\n\n'
+            'https://telegra.ph/Polzovatelskoe-soglashenie-dlya-bota-razdip-bot-08-27'
+        )
+        agreement_button = types.InlineKeyboardButton('✅ Я согласен', callback_data='agreed')
+        agreement_keyboard = types.InlineKeyboardMarkup().add(agreement_button)
+        
+        bot.send_message(user_id, agreement_text, reply_markup=agreement_keyboard, parse_mode='Markdown', disable_web_page_preview=True)
+    else:
+        # Пользователь уже есть в базе данных, отправляем остальную часть кода
+        send_main_keyboard(user_id)
 
-        # Добавление нового пользователя в файл
-        with open('data.yml', 'a') as file:
-            file.write(f'\n- user_id: {user_id}\n user_name: {users_processing[user_id]["user_name"]}\n count_processing: {users_processing[user_id]["count_processing"]}\n free: {users_processing[user_id]["free"]}')
+# Остальная часть вашего кода и функций сохранения данных
 
-    # Создание клавиатуры с кнопками
+# Обработчик для кнопки согласия
+@bot.callback_query_handler(func=lambda call: call.data == 'agreed')
+def agreed_callback(call):
+    user_id = call.from_user.id
+    
+    # Пользователя нет в базе данных, записываем его
+    users_processing[user_id] = {
+        'user_name': bot.get_chat(user_id).username,
+        'count_processing': 0,
+        'free': 0
+    }
+    with open('data.yml', 'a') as file:
+        file.write(f'\n- user_id: {user_id}\n user_name: {users_processing[user_id]["user_name"]}\n count_processing: {users_processing[user_id]["count_processing"]}\n free: {users_processing[user_id]["free"]}')
+        
+        
+    bot.delete_message(call.message.chat.id, call.message.message_id)  # Удаляем сообщение с соглашением
+    send_main_keyboard(user_id)  # Отправляем главное меню
+    save_data()
+
+# Функция для отправки главного меню
+def send_main_keyboard(user_id):
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     button1 = types.KeyboardButton('🔞 Раздеть девушку')
     button2 = types.KeyboardButton('🛒 Купить обработки')
     button3 = types.KeyboardButton('💼 Профиль')
     button4 = types.KeyboardButton('📃 Инструкция')
     support_button = types.KeyboardButton('♻️ Тех.Поддержка')
+    
     keyboard.add(button1, button3)
     keyboard.add(button2, button4)
     keyboard.add(support_button)
-
+    
     with open('start.txt', encoding='utf-8') as f:
         caption = f.read()
-        
-    # Создание инлайн-кнопки и добавление ее к приветственному сообщению
-    inline_button = types.InlineKeyboardButton('👀 Посмотреть примеры', callback_data='show_examples')
-    inline_keyboard = types.InlineKeyboardMarkup()
-    inline_keyboard.add(inline_button)
+    
+    inline_button = types.InlineKeyboardButton('📷 Показать примеры', callback_data='show_examples')
+    inline_keyboard = types.InlineKeyboardMarkup().add(inline_button)
+    
     start_photo = open('start.jpg', 'rb')
+    
     text = "👋"
-    # Отправка приветственного сообщения с клавиатурой и инлайн-кнопкой
-    bot.send_message(message.chat.id, text, reply_markup=keyboard)
-    bot.send_photo(message.chat.id, photo=start_photo, caption=caption, reply_markup=inline_keyboard)
-
-    # Сохранение данных в файл
+    
+    bot.send_message(user_id, text, reply_markup=keyboard)
+    bot.send_photo(user_id, photo=start_photo, caption=caption, reply_markup=inline_keyboard)
+    
     save_data()
-
+  
 @bot.message_handler(func=lambda message: message.text == '♻️ Тех.Поддержка')
 def support(message):
     support_text = 'По вопросам обращайтесь в поддержку:'
