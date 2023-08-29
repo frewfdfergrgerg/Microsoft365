@@ -17,13 +17,12 @@ import os, subprocess, time, glob
 import webuiapi
 import re
 from PIL import ImageFilter
-# Инициализируем API для инпейнтинга
-# api = webuiapi.WebUIApi()
+# Инициализируем API
 api = webuiapi.WebUIApi(host='127.0.0.1',
                         port=7860,
                         sampler='DPM++ SDE',
                         steps=40)
-
+                        
 amounts = {}
 with open('amounts.txt', encoding='utf-8') as f:
   for line in f:
@@ -31,32 +30,20 @@ with open('amounts.txt', encoding='utf-8') as f:
     btn, name, price_name, price = line.split(';')
     amounts[btn] = {'name': name, 'price_name': price_name, 'price': int(price)}
 
-# Чтение токена из файла
 def read_token(filename):
     with open(filename, 'r') as file:
         return file.read().strip()
-
-# Чтение текста из файла
-def read_text(filename):
-    with open(filename, 'r', encoding='utf-8') as file:
-        return file.read().strip()
-
-# Получение токена из файла
+        
 token_bot = read_token('token.txt')
 ADMIN_ID = 793840080
-# Получение access_token из файла
-access_token = read_token('access_token.txt')
-client_id = read_token('client_id.txt')
-
-# Получение YOUR_RECEIVER из файла
-your_receiver = read_token('youmoney.txt')
-# Создание флага для блокировки обработки выбора тарифов
+access_token = '4100110982154501.870D6D03180DF717261ABD00E6C3F4DE4965FAF8158A32959F3EC1E29716A5F024F2CF0C746EFF4C0EFABC00D4663F8BD51A52C59EBCAA2CFCFD716856EB228CDAD786AEC88FDAB2C459993303F4A8309490CAC1B224B3B8CA4D113F4D4773F05D2415E3DD5DC220495AF0DD4BC0B3D3FB93512DAE2BC64B9B3B9DBD12F92768'
+your_receiver = '4100110982154501'
 tariff_selection_in_progress = False
-# Создание экземпляра бота
 bot = telebot.TeleBot(token_bot)
-
-# Удаление webhook'а
 bot.delete_webhook()
+# Инициализация клиента ЮMoney
+token = access_token
+client = Client(token)
 
 # Загрузка данных о количестве обработок из файла
 try:
@@ -67,9 +54,6 @@ try:
 except FileNotFoundError:
     users_processing = {}
 
-# Инициализация клиента ЮMoney
-token = access_token
-client = Client(token)
 
 
 # Функция создания ссылки на оплату
@@ -546,8 +530,6 @@ def send_main_keyboard(user_id):
     keyboard.add(ref)
     keyboard.add(support_button)
     
-    with open('start.txt', encoding='utf-8') as f:
-        caption = f.read()
     
     inline_button = types.InlineKeyboardButton('📷 Показать примеры', url='https://telegra.ph/SnapNudify-Primery-08-29')
     inline_keyboard = types.InlineKeyboardMarkup().add(inline_button)
@@ -555,9 +537,12 @@ def send_main_keyboard(user_id):
     start_photo = open('start.jpg', 'rb')
     
     text = "👋"
-    
+    caption = (f"<b>🤖 Я - нейросеть, которая раздевает фото любой девушки.</b>\n\n"
+              f"<b>📷 Просто отправьте боту фото на котором изображена девушка!</b>\n\n"
+              f"👇 Обязательно посмотри примеры обработок.\n\n"
+    )
     bot.send_message(user_id, text, reply_markup=keyboard)
-    bot.send_photo(user_id, photo=start_photo, caption=caption, reply_markup=inline_keyboard)
+    bot.send_photo(user_id, photo=start_photo, caption=caption, reply_markup=inline_keyboard, parse_mode='HTML')
     
     save_data()
 
