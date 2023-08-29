@@ -23,7 +23,7 @@ api = webuiapi.WebUIApi(host='127.0.0.1',
                         port=7860,
                         sampler='DPM++ SDE',
                         steps=40)
-                        
+
 amounts = {}
 with open('amounts.txt', encoding='utf-8') as f:
   for line in f:
@@ -43,7 +43,7 @@ def read_text(filename):
 
 # Получение токена из файла
 token_bot = read_token('token.txt')
-ADMIN_ID = 6344622092
+ADMIN_ID = 793840080
 # Получение access_token из файла
 access_token = read_token('access_token.txt')
 client_id = read_token('client_id.txt')
@@ -116,12 +116,12 @@ def send_payment_success_message(chat_id, count_processing):
     with open('data.yml', 'w') as file:
         yaml.safe_dump(users_processing, file)
 
-            
+
     # Отправка дополнительного сообщения администратору
     admin_chat_id = ADMIN_ID  # Замените на переменную, содержащую идентификатор администратора
     admin_message_text = f"Пользователь {chat_id} (@{users_processing[chat_id]['user_name']}) совершил успешный платеж.\nКоличество обработок: {users_processing[chat_id]['count_processing']}"
     bot.send_message(admin_chat_id, admin_message_text)
-    
+
     update_data_yml()
 
 
@@ -144,15 +144,17 @@ def give_processing(message):
                 users_processing[user_id]['count_processing'] += processing_count  # Увеличение количества обработок пользователя
             else:
                 users_processing[user_id] = {
-                    'user_name':bot.get_chat(user_id).username,
-                    'count_processing': processing_count,
-                    'free': 0
+                    'user_name': bot.get_chat(user_id).username,
+                    'count_processing': 0,
+                    'free': 0,
+                    'ref': 0,
+                    'ref1': 0
                 }
             update_data_yml()  # Обновление данных в файле data.yml
 
             try:
                 # Отправка сообщения пользователю о получении обработок
-                user_message = f"✅ Получено <code>{processing_count}</code> обработок.\n🏠 У вас: <code>{users_processing[user_id]['count_processing']}</code> обработок"
+                user_message = f"✅ Получено <b>{processing_count}</b> обработок.\n🏠 У вас: <b>{users_processing[user_id]['count_processing']}</b> обработок"
                 bot.send_message(chat_id=user_id, text=user_message, parse_mode='HTML')
                 admin_message = f"✅ ID {user_id} выдано {processing_count} обработок. Текущее количество обработок: {users_processing[user_id]['count_processing']}"
                 bot.reply_to(message, admin_message)
@@ -164,37 +166,6 @@ def give_processing(message):
     else:
         bot.reply_to(message, "У вас нет доступа к этой команде.")
 
-@bot.message_handler(commands=['give'])
-def give_processing(message):
-    # Проверяем, является ли отправитель администратором
-    if message.from_user.id == ADMIN_ID:
-        # Разделяем команду на аргументы (user_id и количество обработок)
-        command_args = message.text.split()
-        if len(command_args) == 3:
-            user_id = int(command_args[1])
-            processing_count = int(command_args[2])
-
-            if user_id in users_processing:
-                users_processing[user_id]['count_processing'] += processing_count  # Увеличение количества обработок пользователя
-            else:
-                users_processing[user_id] = {
-                    'user_name':bot.get_chat(user_id).username,
-                    'count_processing': processing_count,
-                    'free': 0
-                }
-            update_data_yml()  # Обновление данных в файле data.yml
-
-            try:
-                # Отправка сообщения пользователю о получении обработок
-                admin_message = f"(без звука) ✅ ID {user_id} выдано {processing_count} обработок. Текущее количество обработок: {users_processing[user_id]['count_processing']}"
-                bot.reply_to(message, admin_message)
-            except Exception as e:
-                admin_message = f"(без звука) (не зареган) ✅  ID {user_id} выдано {processing_count} обработок. Текущее количество обработок: {users_processing[user_id]['count_processing']}"
-                bot.reply_to(message, admin_message)
-        else:
-            bot.reply_to(message, "Неверный формат команды. Используйте /give <user_id> <количество>")
-    else:
-        bot.reply_to(message, "У вас нет доступа к этой команде.")
 
 @bot.message_handler(content_types=['photo'], func=lambda message: message.from_user.id == ADMIN_ID)
 def handle_admin_photo(message):
@@ -230,7 +201,8 @@ def handle_user_photo(message):
             # Создаем клавиатуры для администратора и пользователя
             keyboard_admin = types.InlineKeyboardMarkup()
             refuse_button = types.InlineKeyboardButton('Отказать', callback_data='refuse_photo')
-            keyboard_admin.add(refuse_button)
+            cannel_button = types.InlineKeyboardButton('Некорректно', callback_data='cancel_photo')
+            keyboard_admin.add(refuse_button, cancel_button)
 
             keyboard_user = types.InlineKeyboardMarkup()
             buy_button = types.InlineKeyboardButton('🛒 Купить обработки', callback_data='buy_processing2')
@@ -254,7 +226,7 @@ def handle_user_photo(message):
             bot.send_photo(admin_id, message.photo[-1].file_id, caption=caption, parse_mode='HTML', reply_markup=keyboard_admin)
 
             admin_message_id = message.message_id
-            message_text = f"⌛ Фотография принята, ожидайте...\n\n📦 Заказ номер: <code>{unique_code}</code>\n🌐 Тех.Поддержка - @razdde"
+            message_text = f"⌛ Фотография принята, ожидайте...\n\n📦 Заказ номер: <code>{unique_code}</code>\n🌐 Тех.Поддержка - @snapnudify_bot"
             bot.send_message(chat_id=user_id, text=message_text, parse_mode='HTML', reply_to_message_id=message_id)
 
             try:
@@ -330,14 +302,14 @@ def handle_user_photo(message):
 
     else:
         bot.send_message(message.chat.id, "Требуется перезагрузка - /start")
-        
+
 @bot.callback_query_handler(func=lambda call: call.data == 'cancel_photo')
 def cancel_photo(call):
 
   user_id = call.message.caption.split('\n')[0].split(': ')[-1].strip()
   items = call.message.caption.split()
   photo_id = call.message.photo[-1].file_id
-  bot.send_photo(user_id, photo_id, caption="❌ Некорректная обработка. Фотография отклонена!")  
+  bot.send_photo(user_id, photo_id, caption="❌ Некорректная обработка. Фотография отклонена!")
   deduct_processing(int(items[1]))
   refusal_caption = "❌ Фото отклонено"
   bot.edit_message_caption(chat_id=call.message.chat.id,
@@ -350,7 +322,13 @@ def buy_processing_callback(call):
     user_id = call.from_user.id
     # Логика обработки нажатия на кнопку "Купить обработку"
     if user_id not in users_processing:
-        users_processing[user_id] = {'user_name': bot.get_chat(user_id).username, 'count_processing': 0}
+        users_processing[user_id] = {
+            'user_name': bot.get_chat(user_id).username,
+            'count_processing': 0,
+            'free': 0,
+            'ref': 0,
+            'ref1': 0
+        }
 
 
     # Создание клавиатуры с кнопками тарифов
@@ -372,13 +350,19 @@ def buy_processing_callback(call):
     count_processing = users_processing[user_id]['count_processing']
     message_text = f"Количество обработок: {count_processing}\n\n<b>Выберите тариф:</b>"
     bot.send_message(call.message.chat.id, text=message_text, reply_markup=keyboard, parse_mode='HTML')
-  
+
 @bot.callback_query_handler(func=lambda call: call.data == 'buy_processing1')
 def buy_processing_callback(call):
     user_id = call.from_user.id
     # Логика обработки нажатия на кнопку "Купить обработку"
     if user_id not in users_processing:
-        users_processing[user_id] = {'user_name': bot.get_chat(user_id).username, 'count_processing': 0}
+        users_processing[user_id] = {
+            'user_name': bot.get_chat(user_id).username,
+            'count_processing': 0,
+            'free': 0,
+            'ref': 0,
+            'ref1': 0
+        }
 
     # Удаление сообщения "⛔ У вас недостаточно обработок. Чтобы купить обработки, нажмите на кнопку ниже 👇"
     bot.delete_message(call.message.chat.id, call.message.message_id)
@@ -455,20 +439,12 @@ def refuse_photo(call):
 
 # Функция вычета обработки из базы данных
 def deduct_processing(user_id):
-
     if user_id in users_processing:
-
        users_processing[user_id]['count_processing'] += 1
-
        with open('data.yml', 'w') as file:
            yaml.safe_dump(users_processing, file)
-
-       message_text = "✅ 1 обработка вернулась на счет."
-       bot.send_message(user_id, message_text)
-
     else:
        bot.send_message(user_id, "Требуется перезагрузка - /start")
-       
 
 
 @bot.message_handler(commands=['start'])
@@ -476,13 +452,38 @@ def start(message):
     user_id = message.from_user.id
     
     if user_id not in users_processing:
-        # Пользователя нет в базе данных, записываем его
+        users_processing[user_id] = {
+            'user_name': bot.get_chat(user_id).username,
+            'count_processing': 0,
+            'free': 0,
+            'ref': 0,
+            'ref1': 0
+        }
+        # Проверяем, есть ли параметр в команде
+        if message.text.startswith('/start'):
+            start_param = message.text.split(' ')[1] if len(message.text.split(' ')) > 1 else None
         
+            # Если есть параметр и он является числом, обрабатываем как реферальную ссылку
+            if start_param and start_param.isdigit():
+                referred_by = int(start_param)
+                if referred_by in users_processing:
+                    users_processing[referred_by]['ref'] += 1
+                    users_processing[referred_by]['ref1'] += 1
+                    referrals_until_free = 5 - users_processing[referred_by]['ref1']
+                    with open('data.yml', 'w') as file:
+                        yaml.safe_dump(users_processing, file)    
+                    bot.send_message(referred_by, parse_mode='HTML', text=f"👤 Новый реферал!\n\n🏠 У вас <b>{users_processing[referred_by]['ref']}</b> рефералов.\n♻️ До обработки <b>{referrals_until_free}</b> рефералов.")
+                    if users_processing[referred_by]['ref1'] == 5:
+                        users_processing[referred_by]['ref1'] = 0
+                        users_processing[referred_by]['count_processing'] += 1
+                        bot.send_message(referred_by, parse_mode='HTML', text=f"✅ Получено <b>1</b> обработка.\n🏠 У вас: <b>{users_processing[referred_by]['count_processing']}</b> обработок")
+                        
+                        save_data()
         # Отправляем сообщение с соглашением и кнопкой подтверждения
         agreement_text = (
             '🔞 Вам необходимо ознакомиться с пользовательским соглашением и подтвердить, что Вам уже исполнилось 18 лет.\n\n'
             '✅ Кнопка "Я согласен" подтверждает ваше согласие с вышеперечисленным.\n\n'
-            'https://telegra.ph/Polzovatelskoe-soglashenie-dlya-bota-razdip-bot-08-27'
+            'https://telegra.ph/Polzovatelskoe-soglashenie-SnapNudify-08-29'
         )
         agreement_button = types.InlineKeyboardButton('✅ Я согласен', callback_data='agreed')
         agreement_keyboard = types.InlineKeyboardMarkup().add(agreement_button)
@@ -492,8 +493,24 @@ def start(message):
         # Пользователь уже есть в базе данных, отправляем остальную часть кода
         send_main_keyboard(user_id)
 
-# Остальная часть вашего кода и функций сохранения данных
 
+# Обработчик для кнопки реферальной системы
+@bot.message_handler(func=lambda message: message.text == '💸 Реферальная система')
+def referral_system(message):
+    user_id = message.from_user.id
+    user_referrals = users_processing.get(user_id, {}).get('ref', 0)
+    referrals_until_free = 5 - users_processing.get(user_id, {}).get('ref1', 0)
+
+    referral_message = (
+        f"👥 Рефералы: <b>{user_referrals}</b>\n"
+        f"♻️ До бесплатной обработки еще нужно <b>{referrals_until_free}</b> рефералов\n\n"
+        f"<b>Ссылка для приглашения:</b> \n<code>https://t.me/{bot.get_me().username}?start={user_id}</code>\n\n"
+        f"🤝 <b>Вы будете получать одну бесплатную обработку за каждых 5 новых пользователей зарегестрированных по вашей реферальной ссылке.</b>", 
+    )
+
+
+    bot.send_message(user_id, referral_message, parse_mode='HTML')
+    
 # Обработчик для кнопки согласия
 @bot.callback_query_handler(func=lambda call: call.data == 'agreed')
 def agreed_callback(call):
@@ -503,13 +520,14 @@ def agreed_callback(call):
     users_processing[user_id] = {
         'user_name': bot.get_chat(user_id).username,
         'count_processing': 0,
-        'free': 0
+        'free': 0,
+        'ref': 0,
+        'ref1': 0
     }
     with open('data.yml', 'a') as file:
-        file.write(f'\n- user_id: {user_id}\n user_name: {users_processing[user_id]["user_name"]}\n count_processing: {users_processing[user_id]["count_processing"]}\n free: {users_processing[user_id]["free"]}')
+        file.write(f'\n- user_id: {user_id}\n user_name: {users_processing[user_id]["user_name"]}\n count_processing: {users_processing[user_id]["count_processing"]}\n free: {users_processing[user_id]["free"]}\n ref: {users_processing[user_id]["ref"]}\n ref1: {users_processing[user_id]["ref1"]}')
         
         
-    bot.delete_message(call.message.chat.id, call.message.message_id)  # Удаляем сообщение с соглашением
     send_main_keyboard(user_id)  # Отправляем главное меню
     save_data()
 
@@ -520,16 +538,18 @@ def send_main_keyboard(user_id):
     button2 = types.KeyboardButton('🛒 Купить обработки')
     button3 = types.KeyboardButton('💼 Профиль')
     button4 = types.KeyboardButton('📃 Инструкция')
+    ref = types.KeyboardButton('💸 Реферальная система')
     support_button = types.KeyboardButton('♻️ Тех.Поддержка')
     
     keyboard.add(button1, button3)
     keyboard.add(button2, button4)
+    keyboard.add(ref)
     keyboard.add(support_button)
     
     with open('start.txt', encoding='utf-8') as f:
         caption = f.read()
     
-    inline_button = types.InlineKeyboardButton('📷 Показать примеры', callback_data='show_examples')
+    inline_button = types.InlineKeyboardButton('📷 Показать примеры', url='https://telegra.ph/SnapNudify-Primery-08-29')
     inline_keyboard = types.InlineKeyboardMarkup().add(inline_button)
     
     start_photo = open('start.jpg', 'rb')
@@ -540,26 +560,7 @@ def send_main_keyboard(user_id):
     bot.send_photo(user_id, photo=start_photo, caption=caption, reply_markup=inline_keyboard)
     
     save_data()
-  
-@bot.message_handler(func=lambda message: message.text == '♻️ Тех.Поддержка')
-def support(message):
-    support_text = 'По вопросам обращайтесь в поддержку:'
-    inline_button = types.InlineKeyboardButton('♻️ Тех.Поддержка', url='https://t.me/razdde')
-    inline_keyboard = types.InlineKeyboardMarkup()
-    inline_keyboard.add(inline_button)
-    bot.send_message(message.chat.id, support_text, reply_markup=inline_keyboard)
 
-
-
-# Обработчик кнопки "Показать примеры"
-@bot.callback_query_handler(func=lambda call: call.data == 'show_examples')
-def show_examples(call):
-    user_id = call.from_user.id
-    photo_files = ['photo1.jpg', 'photo2.jpg', 'photo3.jpg', 'photo4.jpg', 'photo5.jpg', 'photo6.jpg']
-    for photo_file in photo_files:
-        with open(photo_file, 'rb') as photo:
-            bot.send_photo(call.message.chat.id, photo)
-    bot.send_message(call.message.chat.id, "👇 Выбери действие:")
 
 
 @bot.message_handler(func=lambda message: message.text == '📃 Инструкция')
@@ -569,14 +570,16 @@ def send_instructions(message):
         users_processing[user_id] = {
             'user_name': bot.get_chat(user_id).username,
             'count_processing': 0,
-            'free': 0
+            'free': 0,
+            'ref': 0,
+            'ref1': 0
         }
 
     with open('info.txt', 'r', encoding='utf-8') as file:
         instructions = file.read()
 
     # Создание инлайн-кнопки и добавление её к сообщению с инструкциями
-    inline_button = types.InlineKeyboardButton('♻️ Тех.Поддержка', url='https://t.me/razdde')
+    inline_button = types.InlineKeyboardButton('♻️ Тех.Поддержка', url='https://t.me/snapnudify_support')
     inline_keyboard = types.InlineKeyboardMarkup()
     inline_keyboard.add(inline_button)
 
@@ -585,17 +588,31 @@ def send_instructions(message):
 
     # Сохранение данных в файл
     save_data()
+
+@bot.message_handler(func=lambda message: message.text == '♻️ Тех.Поддержка')
+def support(message):
+    support_text = 'По вопросам обращайтесь в поддержку:'
+    inline_button = types.InlineKeyboardButton('♻️ Тех.Поддержка', url='https://t.me/snapnudify_support')
+    inline_keyboard = types.InlineKeyboardMarkup()
+    inline_keyboard.add(inline_button)
+    bot.send_message(message.chat.id, support_text, reply_markup=inline_keyboard)
     
 # Обработчик нажатия на кнопку "Купить обработку"
 @bot.message_handler(func=lambda message: message.text == '🛒 Купить обработки')
 def buy_processing(message):
     user_id = message.from_user.id
     if user_id not in users_processing:
-        users_processing[user_id] = {'user_name': bot.get_chat(user_id).username, 'count_processing': 0, 'free': 0}  # Добавляем параметр 'free'
+        users_processing[user_id] = {
+            'user_name': bot.get_chat(user_id).username,
+            'count_processing': 0,
+            'free': 0,
+            'ref': 0,
+            'ref1': 0
+        }
 
         # Добавление нового пользователя в файл
         with open('data.yml', 'a') as file:
-            file.write(f'\n- user_id: {user_id}\n user_name: {users_processing[user_id]["user_name"]}\n count_processing: {users_processing[user_id]["count_processing"]}\n free: {users_processing[user_id]["free"]}')
+            file.write(f'\n- user_id: {user_id}\n user_name: {users_processing[user_id]["user_name"]}\n count_processing: {users_processing[user_id]["count_processing"]}\n free: {users_processing[user_id]["free"]}\n ref: {users_processing[user_id]["ref"]}\n ref1: {users_processing[user_id]["ref1"]}')
 
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     button1 = types.InlineKeyboardButton(amounts['button1']['name'], callback_data='tariff_1')
@@ -630,7 +647,7 @@ def show_profile(message):
 
         # Формирование текста профиля
         profile_text = f"🏠 ID: <code>{user_id}</code>\n👑 Количество обработок: <b>{count_processing}</b>"
-        profile_text += f"\n\n🌐 Тех.Поддержка - @razdde"
+        profile_text += f"\n\n🌐 Тех.Поддержка - @snapnudify_support"
 
         # Отправка сообщения с профилем пользователя
         bot.send_message(message.chat.id, profile_text, parse_mode='HTML', disable_web_page_preview=True)
@@ -640,14 +657,16 @@ def show_profile(message):
         users_processing[user_id] = {
             'user_name': user_name,
             'count_processing': 0,
-            'free': 0
+            'free': 0,
+            'ref': 0,
+            'ref1': 0
         }
 
         # Записываем обновленные данные в файл data.yml
         save_user_data(users_processing)
         show_profile(message)
-        
-        
+
+
 # Обработчик нажатия на кнопку "🔞 Раздеть девушку"
 @bot.message_handler(func=lambda message: message.text == '🔞 Раздеть девушку')
 def request_photo(message):
@@ -656,7 +675,7 @@ def request_photo(message):
         user_name = users_processing[user_id]['user_name']
         count_processing = users_processing[user_id]['count_processing']
         free_processing = users_processing[user_id]['free']  # Получаем количество бесплатных обработок
-        
+
         if count_processing > 0 or free_processing > 0:  # Изменено условие
             bot.send_message(message.chat.id, "<b>Отправьте фото:</b>", parse_mode='HTML')
         else:
@@ -667,7 +686,13 @@ def request_photo(message):
 
     else:
         user_name = message.from_user.username
-        users_processing[user_id] = {'user_name': user_name, 'count_processing': 0, 'free': 0}  # Добавлен параметр free
+        users_processing[user_id] = {
+            'user_name': user_name,
+            'count_processing': 0,
+            'free': 0,
+            'ref': 0,
+            'ref1': 0
+        }
 
         # Записываем обновленные данные в файл data.yml
         save_user_data(users_processing)
@@ -680,7 +705,13 @@ def handle_buy_processing(call):
     user_id = call.from_user.id
     # Логика обработки нажатия на кнопку "Купить обработку"
     if user_id not in users_processing:
-        users_processing[user_id] = {'user_name': bot.get_chat(user_id).username, 'count_processing': 0}
+        users_processing[user_id] = {
+            'user_name': bot.get_chat(user_id).username,
+            'count_processing': 0,
+            'free': 0,
+            'ref': 0,
+            'ref1': 0
+        }
 
     # Удаление сообщения "⛔ У вас недостаточно обработок. Чтобы купить обработки, нажмите на кнопку ниже 👇"
     bot.delete_message(call.message.chat.id, call.message.message_id)
@@ -726,35 +757,32 @@ def show_stat(message):
 
 # Обработчик команды /send
 @bot.message_handler(commands=['send'])
-def send_message_with_attachment(message):
+def send_message_with_image(message):
+    # Проверяем, является ли отправитель администратором
+        # Разделяем команду на аргументы (айди пользователя и текст сообщения)
+        command_args = message.text.split()
+        if len(command_args) >= 3:
+            user_id = int(command_args[1])
+            text = ' '.join(command_args[2:])
 
-  # Проверяем, является ли отправитель администратором
-  if message.from_user.id == ADMIN_ID:
+            # Отправка сообщения пользователю
+            bot.send_message(user_id, text)
 
-    # Разделяем команду на аргументы (айди пользователя и текст сообщения)  
-    command_args = message.text.split()
+            # Проверка на наличие изображения в сообщении
+            if message.photo:
+                # Получение идентификатора изображения
+                photo_id = message.photo[-1].file_id
+                # Отправка изображения пользователю
+                bot.send_photo(user_id, photo_id)
 
-    if len(command_args) >= 3:
-      
-      user_id = int(command_args[1])
-      text = ' '.join(command_args[2:])
-      
-      try:
-        # Отправка сообщения пользователю
-        bot.send_message(user_id, text)
-        
-        # Отправка уведомления об успехе
-        bot.send_message(ADMIN_ID, "✅ Сообщение отправлено")
-        
-      except Exception as e:
-        # Отправка уведомления об ошибке  
-        bot.send_message(ADMIN_ID, "❌ Сообщение не отправлено") 
-    
-    else:
-      bot.reply_to(message, "Неверный формат команды. Используйте /send <user_id> <текст>")
-
-  else:
-    bot.send_message(message.chat.id, "У вас нет доступа к этой команде.")
+            # Проверка на наличие прикрепленного файла
+            if message.document:
+                # Получение идентификатора файла
+                file_id = message.document.file_id
+                # Отправка файла пользователю
+                bot.send_document(user_id, file_id)
+        else:
+            bot.reply_to(message, "Неверный формат команды. Используйте /send <user_id> <текст>")
 
 
 # Обработчик команды /info
@@ -833,7 +861,7 @@ def handle_tariff_selection(call):
                 bot.delete_message(call.message.chat.id, call.message.message_id)
                 payment_message = bot.send_message(user_id, message_text, reply_markup=keyboard, parse_mode='HTML')
                 payment_message_id = payment_message.message_id
-                
+
 
                 # Проверка успешности платежа в отдельном потоке
                 payment_status_thread = threading.Thread(target=check_payment_status_thread, args=(token, label, user_id, count_processing, payment_message, payment_message_id))
@@ -845,11 +873,10 @@ def handle_tariff_selection(call):
     elif call.data == 'other_payment':
         # Создание инлайн-кнопки и добавление ее к сообщению с инструкциями
         inline = types.InlineKeyboardMarkup()
-        inline_button = types.InlineKeyboardButton('♻ Тех.Поддержка', url='https://t.me/razdde')
+        inline_button = types.InlineKeyboardButton('♻ Тех.Поддержка', url='https://t.me/snapnudify_support')
         inline.add(inline_button)
-        bot.send_message(user_id, "🔗 Для оплаты другими сервисами свяжитесь с Тех.Поддержкой - @razdde", reply_markup=inline)
+        bot.send_message(user_id, "🔗 Для оплаты другими сервисами свяжитесь с Тех.Поддержкой - @snapnudify_support", reply_markup=inline)
         bot.delete_message(call.message.chat.id, call.message.message_id)
-
 
 
 # Запуск бота
