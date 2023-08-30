@@ -185,7 +185,6 @@ def handle_user_photo(message):
             # Создаем клавиатуры для администратора и пользователя
             keyboard_admin = types.InlineKeyboardMarkup()
             refuse_button = types.InlineKeyboardButton('Отказать', callback_data='refuse_photo')
-            cannel_button = types.InlineKeyboardButton('Некорректно', callback_data='cancel_photo')
             keyboard_admin.add(refuse_button, cancel_button)
 
             keyboard_user = types.InlineKeyboardMarkup()
