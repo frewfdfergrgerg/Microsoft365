@@ -242,9 +242,11 @@ def process_photo(admin_id, unique_code, message, photo_result, user_id, file_id
     except Exception as e:
         print("An error occurred:", str(e))
         if photo_result == "not_censorship":
+            bot.delete_message(chat_id=user_id, message_id=wait_mes_id)
             users_processing[user_id]['count_processing'] += 1
             bot.send_message(chat_id=user_id, text='❌ Ошибка. Отправьте другое фото.', reply_to_message_id=message_id) 
         if photo_result == "censorship":
+            bot.delete_message(chat_id=user_id, message_id=wait_mes_id)
             users_processing[user_id]['free'] += 1
             bot.send_message(chat_id=user_id, text='❌ Ошибка. Отправьте другое фото.', reply_to_message_id=message_id)
                   
