@@ -166,6 +166,10 @@ def process_photo(admin_id, unique_code, message, photo_result, user_id, file_id
         keyboard_admin = types.InlineKeyboardMarkup()
         refuse_button = types.InlineKeyboardButton('Отмена', callback_data='refuse_photo')
         keyboard_admin.add(refuse_button)
+
+        keyboard_user = types.InlineKeyboardMarkup()
+        buy_button = types.InlineKeyboardButton('🛒 Купить обработки', callback_data='buy_processing2')
+        keyboard_user.add(buy_button)
       
         message_text2 = f"⌛ <b>Сканирование, ожидайте...</b>"
         bot.edit_message_text(chat_id=user_id, message_id=wait_mes_id, text=message_text2, parse_mode='HTML')
