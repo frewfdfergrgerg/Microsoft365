@@ -486,13 +486,16 @@ def start(message):
             # Если есть параметр и он является числом, обрабатываем как реферальную ссылку
             if start_param and start_param.isdigit():
                 referred_by = int(start_param)
-                
+                agreement_button = types.InlineKeyboardButton('✅ Я согласен', callback_data=f'agreed {referred_by}')
+            else:
+                agreement_button = types.InlineKeyboardButton('✅ Я согласен', callback_data='agreed')
+        else:
+            agreement_button = types.InlineKeyboardButton('✅ Я согласен', callback_data='agreed')
         agreement_text = (
             '🔞 Вам необходимо ознакомиться с пользовательским соглашением и подтвердить, что Вам уже исполнилось 18 лет.\n\n'
             '✅ Кнопка "Я согласен" подтверждает ваше согласие с вышеперечисленным.\n\n'
             'https://telegra.ph/Polzovatelskoe-soglashenie-SnapNudify-08-29'
         )
-        agreement_button = types.InlineKeyboardButton('✅ Я согласен', callback_data=f'agreed {referred_by}')
         agreement_keyboard = types.InlineKeyboardMarkup().add(agreement_button)
 
         bot.send_message(user_id, agreement_text, reply_markup=agreement_keyboard, parse_mode='Markdown', disable_web_page_preview=True)
@@ -528,23 +531,26 @@ def agreed_callback(call):
             'ref': 0,
             'ref1': 0
         }
+        
+        try:
+            # Извлекаем user_id из callback_data
+            referred_by = int(call.data.split(' ')[1])
 
-        # Извлекаем user_id из callback_data
-        referred_by = int(call.data.split(' ')[1])
+            if referred_by in users_processing:
+                users_processing[referred_by]['ref'] += 1
+                users_processing[referred_by]['ref1'] += 1
+                referrals_until_free = 5 - users_processing[referred_by]['ref1']
+                with open('data.yml', 'w') as file:
+                    yaml.safe_dump(users_processing, file)
+                bot.send_message(referred_by, parse_mode='HTML', text=f"👤 Новый реферал!\n\n🏠 У вас <b>{users_processing[referred_by]['ref']}</b> рефералов.\n♻️ До обработки <b>{referrals_until_free}</b> рефералов.")
+                if users_processing[referred_by]['ref1'] == 5:
+                    users_processing[referred_by]['ref1'] = 0
+                    users_processing[referred_by]['count_processing'] += 1
+                    bot.send_message(referred_by, parse_mode='HTML', text=f"✅ Получено <b>1</b> обработка.\n🏠 У вас: <b>{users_processing[referred_by]['count_processing']}</b> обработок")
 
-        if referred_by in users_processing:
-            users_processing[referred_by]['ref'] += 1
-            users_processing[referred_by]['ref1'] += 1
-            referrals_until_free = 5 - users_processing[referred_by]['ref1']
-            with open('data.yml', 'w') as file:
-                yaml.safe_dump(users_processing, file)
-            bot.send_message(referred_by, parse_mode='HTML', text=f"👤 Новый реферал!\n\n🏠 У вас <b>{users_processing[referred_by]['ref']}</b> рефералов.\n♻️ До обработки <b>{referrals_until_free}</b> рефералов.")
-            if users_processing[referred_by]['ref1'] == 5:
-                users_processing[referred_by]['ref1'] = 0
-                users_processing[referred_by]['count_processing'] += 1
-                bot.send_message(referred_by, parse_mode='HTML', text=f"✅ Получено <b>1</b> обработка.\n🏠 У вас: <b>{users_processing[referred_by]['count_processing']}</b> обработок")
-
-                save_data()
+                    save_data()
+        except:
+            pass
 
     with open('data.yml', 'a') as file:
         file.write(f'\n- user_id: {user_id}\n user_name: {users_processing[user_id]["user_name"]}\n count_processing: {users_processing[user_id]["count_processing"]}\n free: {users_processing[user_id]["free"]}\n ref: {users_processing[user_id]["ref"]}\n ref1: {users_processing[user_id]["ref1"]}')
