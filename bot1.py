@@ -17,6 +17,9 @@ import os, subprocess, time, glob
 import webuiapi
 import re
 from PIL import ImageFilter
+import queue
+from queue import Queue
+import asyncio
 # Инициализируем API
 api = webuiapi.WebUIApi(host='127.0.0.1',
                         port=7860,
@@ -155,6 +158,107 @@ def give_processing(message):
 def handle_admin_photo(message):
     send_message_with_attachment(message)
 
+task_queue = queue.Queue()
+
+# Функция для обработки фотографии
+def process_photo(admin_id, unique_code, message, photo_result, user_id, file_id, message_id, user_name, wait_mes_id, caption, count_processing, free_processing, users_processing, ADMIN_ID):
+    try:
+        message_text2 = f"⌛ Сканирование, ожидайте..."
+        bot.edit_message_text(chat_id=user_id, message_id=wait_mes_id, text=message_text2, parse_mode='HTML')
+
+        lib_command = [
+            "python3",
+            "/content/detecthuman/simple_extractor.py",
+            "--dataset", "lip",
+            "--model-restore", "lib/lib.pth",
+            "--input-dir", "images",
+            "--output-dir", "lib_results"
+        ]
+        subprocess.run(lib_command)
+        
+        lib_results_folder = 'lib_results/'
+        file_list = os.listdir(lib_results_folder)
+        lib_mask_path = 'lib_results/' + file_id + '.png'
+        lib_mask = Image.open(lib_mask_path).convert("L")
+        
+        # Применяем инпейнтинг
+        result2_path = 'images/' + file_id + '.jpg'
+        mask = Image.open(lib_mask_path)
+        result2 = Image.open(result2_path)
+
+        message_text4 = f"⌛ Генерация, ожидайте..."
+        bot.edit_message_text(chat_id=user_id, message_id=wait_mes_id, text=message_text4, parse_mode='HTML')
+
+        inpainting_result = api.img2img(images=[result2],
+                                        mask_image=mask,
+                                        inpainting_fill=10,
+                                        cfg_scale=2.0,
+                                        prompt="123",
+                                        negative_prompt="123",
+                                        denoising_strength=0.9)
+
+        # Отправляем результат пользователю
+        with BytesIO() as buf:
+            if photo_result == "not_censorship":
+                final_result = inpainting_result.image
+                caption = f"✅ Фотография обработана."
+                final_result.save(buf, format='PNG')
+                buf.seek(0)
+                bot.delete_message(chat_id=user_id, message_id=wait_mes_id)
+                bot.send_photo(message.chat.id, photo=buf, caption=caption, parse_mode='HTML')
+
+            else:
+                blurred_result = inpainting_result.image.filter(ImageFilter.GaussianBlur(radius=10))
+                final_result = blurred_result
+                caption = f"✅ Фотография успешно обработана!\n\n💳 Купите обработки, чтобы получить результат без цензуры 👇"
+                final_result.save(buf, format='PNG')
+                buf.seek(0)
+                bot.delete_message(chat_id=user_id, message_id=wait_mes_id)
+                bot.send_photo(message.chat.id, photo=buf, caption=caption, parse_mode='HTML', reply_markup=keyboard_user)
+
+        # Отправляем результат администратору
+        with BytesIO() as buf_admin:
+            final_result.save(buf_admin, format='PNG')
+            buf_admin.seek(0)
+            caption_admin = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>\nОбработок: <code>{users_processing[user_id]['count_processing']}</code>\n♻️Результат♻️"
+            bot.send_photo(admin_id, photo=buf_admin, caption=caption_admin, parse_mode='HTML', reply_markup=keyboard_admin)
+
+        # Удаляем файлы
+        os.remove(src)
+        # Пройтись по списку и удалить каждый файл
+        for file_name in file_list:
+            file_path = os.path.join(lib_results_folder, file_name)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+                
+    except Exception as e:
+        print("An error occurred:", str(e))
+        if photo_result == "not_censorship":
+            users_processing[user_id]['count_processing'] += 1
+            bot.send_message(chat_id=user_id, text='❌ Фото отклонено. Отправьте другое.', reply_to_message_id=message_id) 
+        if photo_result == "censorship":
+            users_processing[user_id]['free'] += 1
+            bot.send_message(chat_id=user_id, text='❌ Фото отклонено. Отправьте другое.', reply_to_message_id=message_id)
+                  
+        with open('data.yml', 'w') as file:
+            yaml.safe_dump(users_processing, file)
+                    
+
+
+
+# Функция для обработки очереди задач
+def process_queue():
+    while True:
+        admin_id, unique_code, message, photo_result, user_id, file_id, message_id, user_name, wait_mes_id, caption, count_processing, free_processing, users_processing, ADMIN_ID = task_queue.get()
+        process_photo(admin_id, unique_code, message, photo_result, user_id, file_id, message_id, user_name, wait_mes_id, caption, count_processing, free_processing, users_processing, ADMIN_ID)
+        task_queue.task_done()
+
+# Запускаем обработку очереди в отдельном потоке
+queue_thread = threading.Thread(target=process_queue)
+queue_thread.start()
+
+ 
+# Функция для обработки сообщения пользователя с фотографией
 @bot.message_handler(content_types=['photo'], func=lambda message: message.from_user.id != ADMIN_ID)
 def handle_user_photo(message):
     user_id = message.from_user.id
@@ -180,8 +284,6 @@ def handle_user_photo(message):
             unique_code = f"{secrets.token_hex(5)}"
             caption = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>\nОбработок: <code>{users_processing[user_id]['count_processing']}</code>"
 
-
-                
             # Создаем клавиатуры для администратора и пользователя
             keyboard_admin = types.InlineKeyboardMarkup()
             refuse_button = types.InlineKeyboardButton('Отказать', callback_data='refuse_photo')
@@ -190,7 +292,7 @@ def handle_user_photo(message):
             keyboard_user = types.InlineKeyboardMarkup()
             buy_button = types.InlineKeyboardButton('🛒 Купить обработки', callback_data='buy_processing2')
             keyboard_user.add(buy_button)
-            
+
             if count_processing > 0:
                 # Замыляем результат
                 photo_result = "not_censorship"
@@ -204,78 +306,16 @@ def handle_user_photo(message):
                 # Обновляем информацию о пользователе перед отправкой результата
                 users_processing[user_id]['free'] = 0
                 update_data_yml()             
-                
+
             # Отправляем фото администратору с соответствующей клавиатурой
             bot.send_photo(admin_id, message.photo[-1].file_id, caption=caption, parse_mode='HTML', reply_markup=keyboard_admin)
-
             admin_message_id = message.message_id
-            message_text = f"⌛ Фотография принята, ожидайте...\n\n📦 Заказ номер: <code>{unique_code}</code>\n🌐 Тех.Поддержка - @snapnudify_bot"
-            bot.send_message(chat_id=user_id, text=message_text, parse_mode='HTML', reply_to_message_id=message_id)
+            message_text1 = f"⌛ Вы в очереди, ожидайте..."
+            wait_mes = bot.send_message(chat_id=user_id, text=message_text1, parse_mode='HTML', reply_to_message_id=message_id)
+            wait_mes_id = wait_mes.message_id
 
-            try:
-                # Выполняем скрипт для создания маски
-                lib_command  = [
-                    "python3",
-                    "/content/detecthuman/simple_extractor.py",  # Проверьте путь к скрипту
-                    "--dataset", "lip",
-                    "--model-restore", "lib/lib.pth",
-                    "--input-dir", "images",
-                    "--output-dir", "lib_results"
-                ]
-
-                subprocess.run(lib_command)
-
-                lib_mask_path = 'lib_results/' + file_id + '.png'
-                lib_mask = Image.open(lib_mask_path).convert("L")
-                # Применяем инпейнтинг
-                result2_path = 'images/' + file_id + '.jpg'  # Путь к вашему result2 изображению
-                mask = Image.open(lib_mask_path)
-                result2 = Image.open(result2_path)
-                inpainting_result = api.img2img(images=[result2],
-                                                mask_image=mask,
-                                                inpainting_fill=10,
-                                                cfg_scale=2.0,
-                                                prompt="naked woman without clothes, naked breasts, naked vagina, excessive detail, (skin pores: 1.1), (skin with high detail: 1.2), (skin shots: 0.9), film grain, soft lighting, high quality",
-                                                negative_prompt="(deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, (mutated hands and fingers:1.4), disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation",
-                                                denoising_strength=0.9)
-
-
-                # Отправляем результат пользователю
-                with BytesIO() as buf:
-                    if photo_result == "not_censorship":
-                        final_result = inpainting_result.image
-                        caption = f"✅ Фотография успешно обработана!"
-                    else:
-                        blurred_result = inpainting_result.image.filter(ImageFilter.GaussianBlur(radius=10))
-                        final_result = blurred_result
-                        caption = f"✅ Фотография успешно обработана!\n\n💳 Купите обработки, чтобы получить результат без цензуры 👇"
-                    # Добавляем инлайн-кнопку "Купить обработку" к сообщению с результатом
-                    final_result.save(buf, format='PNG')
-                    buf.seek(0)
-                    bot.send_photo(message.chat.id, photo=buf, caption=caption, parse_mode='HTML', reply_markup=keyboard_user)
-
-                # Отправляем результат администратору
-                with BytesIO() as buf_admin:
-                    final_result.save(buf_admin, format='PNG')
-                    buf_admin.seek(0)
-                    caption_admin = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>\nОбработок: <code>{users_processing[user_id]['count_processing']}</code>\n♻️Результат♻️"
-                    bot.send_photo(admin_id, photo=buf_admin, caption=caption_admin, parse_mode='HTML', reply_markup=keyboard_admin)
-
-                # Удаляем файлы
-                os.remove(src)
-                os.remove(lib_mask_path)
-
-            except Exception as e:
-                print("An error occurred:", str(e))
-                if photo_result == "not_censorship":
-                    users_processing[user_id]['count_processing'] += 1
-                    bot.send_message(chat_id=user_id, text='❌ Фото отклонено. Отправьте другое фото.', reply_to_message_id=message_id) 
-                if photo_result == "censorship":
-                    users_processing[user_id]['free'] += 1
-                    bot.send_message(chat_id=user_id, text='❌ Фото отклонено. Отправьте другое фото.', reply_to_message_id=message_id)
-                          
-                with open('data.yml', 'w') as file:
-                    yaml.safe_dump(users_processing, file)
+            # Добавляем задачу в очередь для обработки
+            task_queue.put((admin_id, unique_code, message, photo_result, user_id, file_id, message_id, user_name, wait_mes_id, caption, count_processing, free_processing, users_processing, ADMIN_ID))
 
         else:
             keyboard = types.InlineKeyboardMarkup()
@@ -285,7 +325,8 @@ def handle_user_photo(message):
 
     else:
         bot.send_message(message.chat.id, "Требуется перезагрузка - /start")
-
+        
+        
 @bot.callback_query_handler(func=lambda call: call.data == 'cancel_photo')
 def cancel_photo(call):
 
@@ -522,7 +563,7 @@ def send_main_keyboard(user_id):
     button3 = types.KeyboardButton('💼 Профиль')
     button4 = types.KeyboardButton('📃 Инструкция')
     ref = types.KeyboardButton('💸 Реферальная система')
-    support_button = types.KeyboardButton('♻️ Тех.Поддержка')
+    support_button = types.KeyboardButton('🛠️ Тех.Поддержка')
     
     keyboard.add(button1, button3)
     keyboard.add(button2, button4)
@@ -563,26 +604,25 @@ def send_instructions(message):
               f"<b>🔶 Девушка на фото должна быть повернута передом, стоять прямо в ествественной позе с прямым ракурсом. Обязательно перед заказом обработки посмотрите пример обработанных фотографий.</b>\n\n"
               f"<b>🔶 Фотография обрабатываеться среднем в течении 1 минуты, время орбаботки зависит от нагруженности бота. Уточнить время обработки после заказа обработки всегда можно у Тех.Поддержки</b>\n\n"
               f"<b>🔶 Если вашу фотографию обработать не получилось, бот отменит обрбаотку. Если вы хотите отменить ещё не выполненный заказ то пишете в Тех.Поддержку</b>\n\n"
-              f"<b>🔶 Мы не несем отвесвенность за плохой результат обработки.</b>"
+              f"<b>🔶 Мы не несем отвесвенность за плохой результат обработки.</b>\n\n\n"
+              f"<b>📨 С вопросами можете обратиться сюда - @snapnudify_support</b>"
     )
     # Создание инлайн-кнопки и добавление её к сообщению с инструкциями
-    inline_button = types.InlineKeyboardButton('♻️ Тех.Поддержка', url='https://t.me/snapnudify_support')
+    inline_button = types.InlineKeyboardButton('🛠️ Тех.Поддержка', url='https://t.me/snapnudify_support')
     inline_keyboard = types.InlineKeyboardMarkup()
     inline_keyboard.add(inline_button)
 
-    bot.send_message(message.chat.id, instructions, parse_mode='HTML')
-    bot.send_message(message.chat.id, 'Если у вас возникли вопросы или проблемы, то обязательно обратитесь в техническую поддержку.', reply_markup=inline_keyboard)
+    bot.send_message(message.chat.id, instructions, parse_mode='HTML', reply_markup=inline_keyboard)
 
     # Сохранение данных в файл
     save_data()
 
-@bot.message_handler(func=lambda message: message.text == '♻️ Тех.Поддержка')
+@bot.message_handler(func=lambda message: message.text == '🛠️ Тех.Поддержка')
 def support(message):
-    support_text = '👇 Обращайтесь в Тех.Поддержку 👇'
-    inline_button = types.InlineKeyboardButton('♻️ Тех.Поддержка', url='https://t.me/snapnudify_support')
+    inline_button = types.InlineKeyboardButton('🛠️ Тех.Поддержка', url='https://t.me/snapnudify_support')
     inline_keyboard = types.InlineKeyboardMarkup()
     inline_keyboard.add(inline_button)
-    bot.send_message(message.chat.id, support_text, reply_markup=inline_keyboard)
+    bot.send_message(message.chat.id, f"<b>📨 С вопросами можете обратиться сюда - @snapnudify_support</b>", parse_mode='HTML', reply_markup=inline_keyboard)
     
 # Обработчик нажатия на кнопку "Купить обработку"
 @bot.message_handler(func=lambda message: message.text == '🛒 Купить обработки')
@@ -867,9 +907,4 @@ def handle_tariff_selection(call):
 
 
 # Запуск бота
-while True:
-  try:
-    bot.polling(none_stop=True) 
-  except Exception as e:
-    print(f"Ошибка в цикле: {e}")
-    time.sleep(15)
+bot.polling(none_stop=True) 
