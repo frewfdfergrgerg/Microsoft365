@@ -235,10 +235,10 @@ def process_photo(admin_id, unique_code, message, photo_result, user_id, file_id
         print("An error occurred:", str(e))
         if photo_result == "not_censorship":
             users_processing[user_id]['count_processing'] += 1
-            bot.send_message(chat_id=user_id, text='❌ Фото отклонено. Отправьте другое.', reply_to_message_id=message_id) 
+            bot.send_message(chat_id=user_id, text='❌ Ошибка. Отправьте другое.', reply_to_message_id=message_id) 
         if photo_result == "censorship":
             users_processing[user_id]['free'] += 1
-            bot.send_message(chat_id=user_id, text='❌ Фото отклонено. Отправьте другое.', reply_to_message_id=message_id)
+            bot.send_message(chat_id=user_id, text='❌ Ошибка. Отправьте другое.', reply_to_message_id=message_id)
                   
         with open('data.yml', 'w') as file:
             yaml.safe_dump(users_processing, file)
@@ -310,7 +310,7 @@ def handle_user_photo(message):
             # Отправляем фото администратору с соответствующей клавиатурой
             bot.send_photo(admin_id, message.photo[-1].file_id, caption=caption, parse_mode='HTML', reply_markup=keyboard_admin)
             admin_message_id = message.message_id
-            message_text1 = f"⌛ Вы в очереди, ожидайте..."
+            message_text1 = f"⌛ Вы в очереди, ожидайте.../n/nПримерное время одижадние: <b>15 секунд</b>"
             wait_mes = bot.send_message(chat_id=user_id, text=message_text1, parse_mode='HTML', reply_to_message_id=message_id)
             wait_mes_id = wait_mes.message_id
 
@@ -333,7 +333,7 @@ def cancel_photo(call):
   user_id = call.message.caption.split('\n')[0].split(': ')[-1].strip()
   items = call.message.caption.split()
   photo_id = call.message.photo[-1].file_id
-  bot.send_photo(user_id, photo_id, caption="❌ Некорректная обработка. Фотография отклонена!")
+  bot.send_photo(user_id, photo_id, caption="❌ Некорректная обработка. Фотография отклонена.")
   deduct_processing(int(items[1]))
   refusal_caption = "❌ Фото отклонено"
   bot.edit_message_caption(chat_id=call.message.chat.id,
@@ -383,7 +383,7 @@ def buy_processing_callback(call):
         users_processing[user_id] = {
             'user_name': bot.get_chat(user_id).username,
             'count_processing': 0,
-            'free': 1,
+            'free': 0,
             'ref': 0,
             'ref1': 0
         }
@@ -479,7 +479,7 @@ def start(message):
         users_processing[user_id] = {
             'user_name': bot.get_chat(user_id).username,
             'count_processing': 0,
-            'free': 0,
+            'free': 1,
             'ref': 0,
             'ref1': 0
         }
