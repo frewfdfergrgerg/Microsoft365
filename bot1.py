@@ -489,18 +489,12 @@ def deduct_processing(user_id):
        bot.send_message(user_id, "Требуется перезагрузка - /start")
 
 
+
 @bot.message_handler(commands=['start'])
 def start(message):
     user_id = message.from_user.id
-    
+
     if user_id not in users_processing:
-        users_processing[user_id] = {
-            'user_name': bot.get_chat(user_id).username,
-            'count_processing': 0,
-            'free': 1,
-            'ref': 0,
-            'ref1': 0
-        }
         # Проверяем, есть ли параметр в команде
         if message.text.startswith('/start'):
             start_param = message.text.split(' ')[1] if len(message.text.split(' ')) > 1 else None
@@ -508,33 +502,18 @@ def start(message):
             # Если есть параметр и он является числом, обрабатываем как реферальную ссылку
             if start_param and start_param.isdigit():
                 referred_by = int(start_param)
-                if referred_by in users_processing:
-                    users_processing[referred_by]['ref'] += 1
-                    users_processing[referred_by]['ref1'] += 1
-                    referrals_until_free = 5 - users_processing[referred_by]['ref1']
-                    with open('data.yml', 'w') as file:
-                        yaml.safe_dump(users_processing, file)    
-                    bot.send_message(referred_by, parse_mode='HTML', text=f"👤 Новый реферал!\n\n🏠 У вас <b>{users_processing[referred_by]['ref']}</b> рефералов.\n♻️ До обработки <b>{referrals_until_free}</b> рефералов.")
-                    if users_processing[referred_by]['ref1'] == 5:
-                        users_processing[referred_by]['ref1'] = 0
-                        users_processing[referred_by]['count_processing'] += 1
-                        bot.send_message(referred_by, parse_mode='HTML', text=f"✅ Получено <b>1</b> обработка.\n🏠 У вас: <b>{users_processing[referred_by]['count_processing']}</b> обработок")
-                        
-                        save_data()
-        # Отправляем сообщение с соглашением и кнопкой подтверждения
+                
         agreement_text = (
             '🔞 Вам необходимо ознакомиться с пользовательским соглашением и подтвердить, что Вам уже исполнилось 18 лет.\n\n'
             '✅ Кнопка "Я согласен" подтверждает ваше согласие с вышеперечисленным.\n\n'
             'https://telegra.ph/Polzovatelskoe-soglashenie-SnapNudify-08-29'
         )
-        agreement_button = types.InlineKeyboardButton('✅ Я согласен', callback_data='agreed')
+        agreement_button = types.InlineKeyboardButton('✅ Я согласен', callback_data=f'agreed {referred_by}')
         agreement_keyboard = types.InlineKeyboardMarkup().add(agreement_button)
-        
+
         bot.send_message(user_id, agreement_text, reply_markup=agreement_keyboard, parse_mode='Markdown', disable_web_page_preview=True)
     else:
-        # Пользователь уже есть в базе данных, отправляем остальную часть кода
         send_main_keyboard(user_id)
-
 
 # Обработчик для кнопки реферальной системы
 @bot.message_handler(func=lambda message: message.text == '💸 Реферальная система')
@@ -547,32 +526,48 @@ def referral_system(message):
         f"👥 Рефералы: <b>{user_referrals}</b>\n"
         f"♻️ До бесплатной обработки еще нужно <b>{referrals_until_free}</b> рефералов\n\n"
         f"<b>Ссылка для приглашения:</b> \n<code>https://t.me/{bot.get_me().username}?start={user_id}</code>\n\n"
-        f"🤝 <b>Вы будете получать одну бесплатную обработку за каждых 5 новых пользователей зарегестрированных по вашей реферальной ссылке.</b>", 
+        f"🤝 <b>Вы будете получать одну бесплатную обработку за каждых 5 новых пользователей зарегистрированных по вашей реферальной ссылке.</b>", 
     )
 
-
     bot.send_message(user_id, referral_message, parse_mode='HTML')
-    
+
 # Обработчик для кнопки согласия
-@bot.callback_query_handler(func=lambda call: call.data == 'agreed')
+@bot.callback_query_handler(func=lambda call: call.data.startswith('agreed'))
 def agreed_callback(call):
     user_id = call.from_user.id
-    
-    # Пользователя нет в базе данных, записываем его
-    users_processing[user_id] = {
-        'user_name': bot.get_chat(user_id).username,
-        'count_processing': 0,
-        'free': 1,
-        'ref': 0,
-        'ref1': 0
-    }
+    if user_id not in users_processing:
+        # Пользователя нет в базе данных, записываем его
+        users_processing[user_id] = {
+            'user_name': bot.get_chat(user_id).username,
+            'count_processing': 0,
+            'free': 1,
+            'ref': 0,
+            'ref1': 0
+        }
+
+        # Извлекаем user_id из callback_data
+        referred_by = int(call.data.split(' ')[1])
+
+        if referred_by in users_processing:
+            users_processing[referred_by]['ref'] += 1
+            users_processing[referred_by]['ref1'] += 1
+            referrals_until_free = 5 - users_processing[referred_by]['ref1']
+            with open('data.yml', 'w') as file:
+                yaml.safe_dump(users_processing, file)
+            bot.send_message(referred_by, parse_mode='HTML', text=f"👤 Новый реферал!\n\n🏠 У вас <b>{users_processing[referred_by]['ref']}</b> рефералов.\n♻️ До обработки <b>{referrals_until_free}</b> рефералов.")
+            if users_processing[referred_by]['ref1'] == 5:
+                users_processing[referred_by]['ref1'] = 0
+                users_processing[referred_by]['count_processing'] += 1
+                bot.send_message(referred_by, parse_mode='HTML', text=f"✅ Получено <b>1</b> обработка.\n🏠 У вас: <b>{users_processing[referred_by]['count_processing']}</b> обработок")
+
+                save_data()
+
     with open('data.yml', 'a') as file:
         file.write(f'\n- user_id: {user_id}\n user_name: {users_processing[user_id]["user_name"]}\n count_processing: {users_processing[user_id]["count_processing"]}\n free: {users_processing[user_id]["free"]}\n ref: {users_processing[user_id]["ref"]}\n ref1: {users_processing[user_id]["ref1"]}')
-        
-        
+
     send_main_keyboard(user_id)  # Отправляем главное меню
     save_data()
-
+    
 # Функция для отправки главного меню
 def send_main_keyboard(user_id):
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -687,15 +682,20 @@ def buy_processing(message):
 def show_profile(message):
     user_id = message.from_user.id
     if user_id in users_processing:
+        inline_button_1 = types.InlineKeyboardButton('Пользовательское соглашение', url='https://telegra.ph/Polzovatelskoe-soglashenie-SnapNudify-08-29')
+        inline_button_2 = types.InlineKeyboardButton('Политика конфиденциальности', url='https://telegra.ph/Politika-konfidencialnosti-dlya-bota-razdip-bot-08-27')
+        inline_keyboard = types.InlineKeyboardMarkup()
+        inline_keyboard.add(inline_button_1)
+        inline_keyboard.add(inline_button_2)
         user_name = users_processing[user_id]['user_name']
         count_processing = users_processing[user_id]['count_processing']
-
+    
         # Формирование текста профиля
         profile_text = f"🏠 ID: <code>{user_id}</code>\n👑 Количество обработок: <b>{count_processing}</b>"
         profile_text += f"\n\n🌐 Тех.Поддержка - @snapnudify_support"
 
         # Отправка сообщения с профилем пользователя
-        bot.send_message(message.chat.id, profile_text, parse_mode='HTML', disable_web_page_preview=True)
+        bot.send_message(message.chat.id, profile_text, parse_mode='HTML', disable_web_page_preview=True, reply_markup=inline_keyboard)
     else:
         # Если пользователя нет в базе данных, добавляем его с информацией по умолчанию
         user_name = message.from_user.username
@@ -925,4 +925,9 @@ def handle_tariff_selection(call):
 
 
 # Запуск бота
-bot.polling(none_stop=True) 
+while True:
+  try:
+    bot.polling(none_stop=True)
+  except Exception as e:
+    print(f"Ошибка в цикле: {e}")
+    time.sleep(15) 
