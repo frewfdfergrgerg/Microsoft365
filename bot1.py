@@ -235,10 +235,10 @@ def process_photo(admin_id, unique_code, message, photo_result, user_id, file_id
         print("An error occurred:", str(e))
         if photo_result == "not_censorship":
             users_processing[user_id]['count_processing'] += 1
-            bot.send_message(chat_id=user_id, text='❌ Ошибка. Отправьте другое.', reply_to_message_id=message_id) 
+            bot.send_message(chat_id=user_id, text='❌ Ошибка. Отправьте другое фото.', reply_to_message_id=message_id) 
         if photo_result == "censorship":
             users_processing[user_id]['free'] += 1
-            bot.send_message(chat_id=user_id, text='❌ Ошибка. Отправьте другое.', reply_to_message_id=message_id)
+            bot.send_message(chat_id=user_id, text='❌ Ошибка. Отправьте другое фото.', reply_to_message_id=message_id)
                   
         with open('data.yml', 'w') as file:
             yaml.safe_dump(users_processing, file)
@@ -310,7 +310,7 @@ def handle_user_photo(message):
             # Отправляем фото администратору с соответствующей клавиатурой
             bot.send_photo(admin_id, message.photo[-1].file_id, caption=caption, parse_mode='HTML', reply_markup=keyboard_admin)
             admin_message_id = message.message_id
-            message_text1 = f"⌛ Вы в очереди, ожидайте.../n/nПримерное время одижадние: <b>15 секунд</b>"
+            message_text1 = f"⌛ Вы в очереди, ожидайте...\n\n~Примерное время одижадние: <b>15 секунд</b>"
             wait_mes = bot.send_message(chat_id=user_id, text=message_text1, parse_mode='HTML', reply_to_message_id=message_id)
             wait_mes_id = wait_mes.message_id
 
@@ -430,10 +430,10 @@ def send_message_with_attachment(message):
                 text = ' '.join(items[2:])
                 bot.send_photo(int(items[1]), photo, caption=text)
             elif items[0] == '/true':
-                true_text = "✅ фотография успешно обработана!"
+                true_text = "✅ фотография обработана."
                 bot.send_photo(int(items[1]), photo, caption=true_text)
             elif items[0] == '/false':
-                false_text = "❌ Ваша фотография не подходит! Выберите другое фото."
+                false_text = "❌ Ваша фотография не подходит! Выберите другое."
                 bot.send_photo(int(items[1]), photo, caption=false_text)
                 deduct_processing(int(items[1]))  # Вычет обработки из базы данных
             else:
