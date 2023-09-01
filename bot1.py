@@ -292,7 +292,7 @@ def handle_user_photo(message):
                 new_file.write(downloaded_file)
 
             unique_code = f"{secrets.token_hex(5)}"
-            caption = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>\nОбработок: <code>{users_processing[user_id]['count_processing']}</code>"
+            caption = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nОбработок: <code>{users_processing[user_id]['count_processing']}</code>"
 
             keyboard_user = types.InlineKeyboardMarkup()
             buy_button = types.InlineKeyboardButton('🛒 Купить обработки', callback_data='buy_processing2')
