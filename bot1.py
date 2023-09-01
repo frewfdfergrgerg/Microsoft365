@@ -163,7 +163,11 @@ task_queue = queue.Queue()
 # Функция для обработки фотографии
 def process_photo(admin_id, unique_code, message, photo_result, user_id, file_id, message_id, user_name, wait_mes_id, caption, count_processing, free_processing, users_processing, ADMIN_ID):
     try:
-        message_text2 = f"⌛ Сканирование, ожидайте..."
+        keyboard_admin = types.InlineKeyboardMarkup()
+        refuse_button = types.InlineKeyboardButton('Отмена', callback_data='refuse_photo')
+        keyboard_admin.add(refuse_button)
+      
+        message_text2 = f"⌛ <b>Сканирование, ожидайте...</b>"
         bot.edit_message_text(chat_id=user_id, message_id=wait_mes_id, text=message_text2, parse_mode='HTML')
 
         lib_command = [
@@ -186,7 +190,7 @@ def process_photo(admin_id, unique_code, message, photo_result, user_id, file_id
         mask = Image.open(lib_mask_path)
         result2 = Image.open(result2_path)
 
-        message_text4 = f"⌛ Генерация, ожидайте..."
+        message_text4 = f"⌛ <b>Генерация, ожидайте...</b>"
         bot.edit_message_text(chat_id=user_id, message_id=wait_mes_id, text=message_text4, parse_mode='HTML')
 
         inpainting_result = api.img2img(images=[result2],
@@ -310,7 +314,7 @@ def handle_user_photo(message):
             # Отправляем фото администратору с соответствующей клавиатурой
             bot.send_photo(admin_id, message.photo[-1].file_id, caption=caption, parse_mode='HTML', reply_markup=keyboard_admin)
             admin_message_id = message.message_id
-            message_text1 = f"⌛ Вы в очереди, ожидайте...\n\n~Примерное время одижадние: <b>15 секунд</b>"
+            message_text1 = f"⌛ <b>Вы в очереди, ожидайте...</b>\n\n~Примерное время одижадние: <b>15 секунд</b>"
             wait_mes = bot.send_message(chat_id=user_id, text=message_text1, parse_mode='HTML', reply_to_message_id=message_id)
             wait_mes_id = wait_mes.message_id
 
