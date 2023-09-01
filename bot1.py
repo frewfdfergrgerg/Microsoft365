@@ -543,7 +543,7 @@ def agreed_callback(call):
     users_processing[user_id] = {
         'user_name': bot.get_chat(user_id).username,
         'count_processing': 0,
-        'free': 0,
+        'free': 1,
         'ref': 0,
         'ref1': 0
     }
