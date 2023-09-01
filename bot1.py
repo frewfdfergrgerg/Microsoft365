@@ -164,7 +164,7 @@ task_queue = queue.Queue()
 def process_photo(admin_id, unique_code, message, photo_result, user_id, file_id, message_id, user_name, wait_mes_id, caption, count_processing, free_processing, users_processing, ADMIN_ID):
     try:
         keyboard_admin = types.InlineKeyboardMarkup()
-        refuse_button = types.InlineKeyboardButton('Отмена', callback_data='refuse_photo')
+        refuse_button = types.InlineKeyboardButton('Отмена', callback_data='cancel_photo_1')
         keyboard_admin.add(refuse_button)
 
         keyboard_user = types.InlineKeyboardMarkup()
@@ -296,7 +296,7 @@ def handle_user_photo(message):
             buy_button = types.InlineKeyboardButton('🛒 Купить обработки', callback_data='buy_processing2')
             keyboard_user.add(buy_button)
             keyboard_admin = types.InlineKeyboardMarkup()
-            refuse_button = types.InlineKeyboardButton('Отмена', callback_data='cancel_photo_1')
+            refuse_button = types.InlineKeyboardButton('Отмена', callback_data='cancel_photo')
             keyboard_admin.add(refuse_button)
             if count_processing > 0:
                 # Замыляем результат
@@ -333,12 +333,12 @@ def handle_user_photo(message):
         
 
 @bot.callback_query_handler(func=lambda call: call.data == 'cancel_photo_1')
-def cancel_photo(call):
+def cancel_photo_1(call):
 
   user_id = call.message.caption.split('\n')[0].split(': ')[-1].strip()
   items = call.message.caption.split()
   photo_id = call.message.photo[-1].file_id
-  bot.send_photo(user_id, photo_id, caption="❌ Обрбаотка отмененна. Отправь фото еще раз.")
+  bot.send_photo(user_id, photo_id, caption="❌ Обработка отмененна. Отправь фото еще раз.")
   deduct_processing(int(items[1]))
   refusal_caption = "❌ Фото отклонено"
   bot.edit_message_caption(chat_id=call.message.chat.id,
@@ -460,24 +460,6 @@ def send_message_with_attachment(message):
             bot.reply_to(message, "Подпись к фото отсутствует.")
 
 
-
-@bot.callback_query_handler(func=lambda call: call.data == 'refuse_photo')
-def refuse_photo(call):
-
-    user_id = call.message.caption.split('\n')[0].split(': ')[-1].strip()
-
-    items = call.message.caption.split()
-
-    photo_id = call.message.photo[-1].file_id
-
-    bot.send_photo(user_id, photo_id, caption="❌ Фотография отклонена! Выберите другое фото.")
-
-    deduct_processing(int(items[1]))
-
-    refusal_caption = "❌ Фото отклонено"
-    bot.edit_message_caption(chat_id=call.message.chat.id,
-                             message_id=call.message.message_id,
-                             caption=call.message.caption + "\n" + refusal_caption)
 
 # Функция вычета обработки из базы данных
 def deduct_processing(user_id):
