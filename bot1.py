@@ -288,11 +288,6 @@ def handle_user_photo(message):
             unique_code = f"{secrets.token_hex(5)}"
             caption = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>\nОбработок: <code>{users_processing[user_id]['count_processing']}</code>"
 
-            # Создаем клавиатуры для администратора и пользователя
-            keyboard_admin = types.InlineKeyboardMarkup()
-            refuse_button = types.InlineKeyboardButton('Отказать', callback_data='refuse_photo')
-            keyboard_admin.add(refuse_button)
-
             keyboard_user = types.InlineKeyboardMarkup()
             buy_button = types.InlineKeyboardButton('🛒 Купить обработки', callback_data='buy_processing2')
             keyboard_user.add(buy_button)
