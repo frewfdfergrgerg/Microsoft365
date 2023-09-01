@@ -201,8 +201,8 @@ def process_photo(admin_id, unique_code, message, photo_result, user_id, file_id
                                         mask_image=mask,
                                         inpainting_fill=10,
                                         cfg_scale=2.0,
-                                        prompt="123",
-                                        negative_prompt="123",
+                                        prompt="naked woman without clothes, naked breasts, naked vagina, excessive detail, (skin pores: 1.1), (skin with high detail: 1.2), (skin shots: 0.9), film grain, soft lighting, high quality",
+                                        negative_prompt="(deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, (mutated hands and fingers:1.4), disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation",
                                         denoising_strength=0.9)
 
         # Отправляем результат пользователю
