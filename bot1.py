@@ -259,9 +259,13 @@ def process_photo(src, admin_id, unique_code, message, photo_result, user_id, fi
 # Функция для обработки очереди задач
 def process_queue():
     while True:
-        src, admin_id, unique_code, message, photo_result, user_id, file_id, message_id, user_name, wait_mes_id, caption, count_processing, free_processing, users_processing, ADMIN_ID = task_queue.get()
-        process_photo(src, admin_id, unique_code, message, photo_result, user_id, file_id, message_id, user_name, wait_mes_id, caption, count_processing, free_processing, users_processing, ADMIN_ID)
-        task_queue.task_done()
+        try:
+            admin_id, unique_code, message, photo_result, user_id, file_id, message_id, user_name, wait_mes_id, caption, count_processing, free_processing, users_processing, ADMIN_ID = task_queue.get()
+            process_photo(admin_id, unique_code, message, photo_result, user_id, file_id, message_id, user_name, wait_mes_id, caption, count_processing, free_processing, users_processing, ADMIN_ID)
+        except Exception as e:
+            print("An error occurred:", str(e))
+        finally:
+            task_queue.task_done()
 
 # Запускаем обработку очереди в отдельном потоке
 queue_thread = threading.Thread(target=process_queue)
