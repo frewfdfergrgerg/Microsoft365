@@ -163,107 +163,109 @@ task_queue = queue.Queue()
 # Функция для обработки фотографии
 def process_photo(admin_id, unique_code, message, photo_result, user_id, file_id, message_id, user_name, wait_mes_id, caption, count_processing, free_processing, users_processing, ADMIN_ID):
     try:
-        try:
-            keyboard_admin = types.InlineKeyboardMarkup()
-            refuse_button = types.InlineKeyboardButton('Отмена', callback_data='cancel_photo_1')
-            keyboard_admin.add(refuse_button)
+        time.sleep(10) 
+        keyboard_admin = types.InlineKeyboardMarkup()
+        refuse_button = types.InlineKeyboardButton('Отмена', callback_data='cancel_photo_1')
+        keyboard_admin.add(refuse_button)
 
-            keyboard_user = types.InlineKeyboardMarkup()
-            buy_button = types.InlineKeyboardButton('🛒 Купить обработки', callback_data='buy_processing2')
-            keyboard_user.add(buy_button)
-          
-            message_text2 = f"⌛ <b>Сканирование, ожидайте...</b>"
-            bot.edit_message_text(chat_id=user_id, message_id=wait_mes_id, text=message_text2, parse_mode='HTML')
+        keyboard_user = types.InlineKeyboardMarkup()
+        buy_button = types.InlineKeyboardButton('🛒 Купить обработки', callback_data='buy_processing2')
+        keyboard_user.add(buy_button)
+      
+        message_text2 = f"⌛ <b>Сканирование, ожидайте...</b>"
+        bot.edit_message_text(chat_id=user_id, message_id=wait_mes_id, text=message_text2, parse_mode='HTML')
 
-            lib_command = [
-                "python3",
-                "/content/detecthuman/simple_extractor.py",
-                "--dataset", "lip",
-                "--model-restore", "lib/lib.pth",
-                "--input-dir", "images",
-                "--output-dir", "lib_results"
-            ]
-            subprocess.run(lib_command)
-            
-            lib_results_folder = 'lib_results/'
-            file_list = os.listdir(lib_results_folder)
-            lib_mask_path = 'lib_results/' + file_id + '.png'
-            lib_mask = Image.open(lib_mask_path).convert("L")
-            
-            # Применяем инпейнтинг
-            result2_path = 'images/' + file_id + '.jpg'
-            mask = Image.open(lib_mask_path)
-            result2 = Image.open(result2_path)
+        lib_command = [
+            "python3",
+            "/content/detecthuman/simple_extractor.py",
+            "--dataset", "lip",
+            "--model-restore", "lib/lib.pth",
+            "--input-dir", "images",
+            "--output-dir", "lib_results"
+        ]
+        subprocess.run(lib_command)
+        
+        lib_results_folder = 'lib_results/'
+        file_list = os.listdir(lib_results_folder)
+        lib_mask_path = 'lib_results/' + file_id + '.png'
+        lib_mask = Image.open(lib_mask_path).convert("L")
+        
+        # Применяем инпейнтинг
+        result2_path = 'images/' + file_id + '.jpg'
+        mask = Image.open(lib_mask_path)
+        result2 = Image.open(result2_path)
 
-            message_text4 = f"⌛ <b>Генерация, ожидайте...</b>"
-            bot.edit_message_text(chat_id=user_id, message_id=wait_mes_id, text=message_text4, parse_mode='HTML')
+        message_text4 = f"⌛ <b>Генерация, ожидайте...</b>"
+        bot.edit_message_text(chat_id=user_id, message_id=wait_mes_id, text=message_text4, parse_mode='HTML')
 
-            inpainting_result = api.img2img(images=[result2],
-                                            mask_image=mask,
-                                            inpainting_fill=10,
-                                            cfg_scale=2.0,
-                                            prompt="naked woman without clothes, naked breasts, naked vagina, excessive detail, (skin pores: 1.1), (skin with high detail: 1.2), (skin shots: 0.9), film grain, soft lighting, high quality",
-                                            negative_prompt="(deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, (mutated hands and fingers:1.4), disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation",
-                                            denoising_strength=0.9)
+        inpainting_result = api.img2img(images=[result2],
+                                        mask_image=mask,
+                                        inpainting_fill=10,
+                                        cfg_scale=2.0,
+                                        prompt="naked woman without clothes, naked breasts, naked vagina, excessive detail, (skin pores: 1.1), (skin with high detail: 1.2), (skin shots: 0.9), film grain, soft lighting, high quality",
+                                        negative_prompt="(deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, (mutated hands and fingers:1.4), disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation",
+                                        denoising_strength=0.9)
 
-            # Отправляем результат пользователю
-            with BytesIO() as buf:
-                if photo_result == "not_censorship":
-                    final_result = inpainting_result.image
-                    caption = f"✅ Фотография обработана."
-                    final_result.save(buf, format='PNG')
-                    buf.seek(0)
-                    bot.delete_message(chat_id=user_id, message_id=wait_mes_id)
-                    bot.send_photo(message.chat.id, photo=buf, caption=caption, parse_mode='HTML')
-
-                else:
-                    blurred_result = inpainting_result.image.filter(ImageFilter.GaussianBlur(radius=10))
-                    final_result = blurred_result
-                    caption = f"✅ Фотография успешно обработана!\n\n💳 Купите обработки, чтобы получить результат без цензуры 👇"
-                    final_result.save(buf, format='PNG')
-                    buf.seek(0)
-                    bot.delete_message(chat_id=user_id, message_id=wait_mes_id)
-                    bot.send_photo(message.chat.id, photo=buf, caption=caption, parse_mode='HTML', reply_markup=keyboard_user)
-
-            # Отправляем результат администратору
-            with BytesIO() as buf_admin:
-                final_result.save(buf_admin, format='PNG')
-                buf_admin.seek(0)
-                caption_admin = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>\nОбработок: <code>{users_processing[user_id]['count_processing']}</code>\n♻️Результат♻️"
-                bot.send_photo(admin_id, photo=buf_admin, caption=caption_admin, parse_mode='HTML', reply_markup=keyboard_admin)
-
-            # Удаляем файлы
-            os.remove(src)
-            # Пройтись по списку и удалить каждый файл
-            for file_name in file_list:
-                file_path = os.path.join(lib_results_folder, file_name)
-                if os.path.isfile(file_path):
-                    os.remove(file_path)
-                    
-        except Exception as e:
-            print("An error occurred:", str(e))
+        # Отправляем результат пользователю
+        with BytesIO() as buf:
             if photo_result == "not_censorship":
+                final_result = inpainting_result.image
+                caption = f"✅ Фотография обработана."
+                final_result.save(buf, format='PNG')
+                buf.seek(0)
                 bot.delete_message(chat_id=user_id, message_id=wait_mes_id)
-                users_processing[user_id]['count_processing'] += 1
-                bot.send_message(chat_id=user_id, text='❌ Ошибка. Отправьте другое фото.', reply_to_message_id=message_id) 
-            if photo_result == "censorship":
+                bot.send_photo(message.chat.id, photo=buf, caption=caption, parse_mode='HTML')
+
+            else:
+                blurred_result = inpainting_result.image.filter(ImageFilter.GaussianBlur(radius=10))
+                final_result = blurred_result
+                caption = f"✅ Фотография успешно обработана!\n\n💳 Купите обработки, чтобы получить результат без цензуры 👇"
+                final_result.save(buf, format='PNG')
+                buf.seek(0)
                 bot.delete_message(chat_id=user_id, message_id=wait_mes_id)
-                users_processing[user_id]['free'] += 1
-                bot.send_message(chat_id=user_id, text='❌ Ошибка. Отправьте другое фото.', reply_to_message_id=message_id)
-                      
-            with open('data.yml', 'w') as file:
-                yaml.safe_dump(users_processing, file)
-                    
-    except:
-        task_queue.task_done()
+                bot.send_photo(message.chat.id, photo=buf, caption=caption, parse_mode='HTML', reply_markup=keyboard_user)
+
+        # Отправляем результат администратору
+        with BytesIO() as buf_admin:
+            final_result.save(buf_admin, format='PNG')
+            buf_admin.seek(0)
+            caption_admin = f"ID: <code>{user_id}</code>\nНик: @{user_name}\nЗаказ: <code>{unique_code}</code>\nОбработок: <code>{users_processing[user_id]['count_processing']}</code>\n♻️Результат♻️"
+            bot.send_photo(admin_id, photo=buf_admin, caption=caption_admin, parse_mode='HTML', reply_markup=keyboard_admin)
+
+        # Удаляем файлы
+        os.remove(src)
+        # Пройтись по списку и удалить каждый файл
+        for file_name in file_list:
+            file_path = os.path.join(lib_results_folder, file_name)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+                
+    except Exception as e:
+        print("An error occurred:", str(e))
+        if photo_result == "not_censorship":
+            bot.delete_message(chat_id=user_id, message_id=wait_mes_id)
+            users_processing[user_id]['count_processing'] += 1
+            bot.send_message(chat_id=user_id, text='❌ Ошибка. Отправьте другое фото.', reply_to_message_id=message_id) 
+        if photo_result == "censorship":
+            bot.delete_message(chat_id=user_id, message_id=wait_mes_id)
+            users_processing[user_id]['free'] += 1
+            bot.send_message(chat_id=user_id, text='❌ Ошибка. Отправьте другое фото.', reply_to_message_id=message_id)
+                  
+        with open('data.yml', 'w') as file:
+            yaml.safe_dump(users_processing, file)
 
 
 # Функция для обработки очереди задач
+# Функция для обработки очереди задач
 def process_queue():
     while True:
-        admin_id, unique_code, message, photo_result, user_id, file_id, message_id, user_name, wait_mes_id, caption, count_processing, free_processing, users_processing, ADMIN_ID = task_queue.get()
-        process_photo(admin_id, unique_code, message, photo_result, user_id, file_id, message_id, user_name, wait_mes_id, caption, count_processing, free_processing, users_processing, ADMIN_ID)
-        task_queue.task_done()
+        try:
+            admin_id, unique_code, message, photo_result, user_id, file_id, message_id, user_name, wait_mes_id, caption, count_processing, free_processing, users_processing, ADMIN_ID = task_queue.get()
+            process_photo(admin_id, unique_code, message, photo_result, user_id, file_id, message_id, user_name, wait_mes_id, caption, count_processing, free_processing, users_processing, ADMIN_ID)
+        except Exception as e:
+            print("An error occurred:", str(e))
+        finally:
+            task_queue.task_done()
 
 # Запускаем обработку очереди в отдельном потоке
 queue_thread = threading.Thread(target=process_queue)
