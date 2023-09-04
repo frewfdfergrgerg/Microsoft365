@@ -163,7 +163,6 @@ task_queue = queue.Queue()
 # Функция для обработки фотографии
 def process_photo(admin_id, unique_code, message, photo_result, user_id, file_id, message_id, user_name, wait_mes_id, caption, count_processing, free_processing, users_processing, ADMIN_ID):
     try:
-        time.sleep(10) 
         keyboard_admin = types.InlineKeyboardMarkup()
         refuse_button = types.InlineKeyboardButton('Отмена', callback_data='cancel_photo_1')
         keyboard_admin.add(refuse_button)
