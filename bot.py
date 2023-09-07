@@ -6,7 +6,7 @@ from io import BytesIO
 import os, subprocess, time, glob
 import webuiapi
 import re
-token = "6550926108:AAHbCdI05A5S44_cK693jKmyStWlTRwbSuo"
+token = "5871863876:AAF0TkJMfh0QmVDg9Jz8AVLb9EULdhIkeRY"
 bot = telebot.TeleBot(token)
 
 # Инициализируем API для инпейнтинга
