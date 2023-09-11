@@ -218,7 +218,7 @@ def process_photo(src, admin_id, unique_code, message, photo_result, user_id, fi
             else:
                 blurred_result = inpainting_result.image.filter(ImageFilter.GaussianBlur(radius=10))
                 final_result = blurred_result
-                caption = f"💳 <bXЧтобы получить результат без размытие, просто приобрети платные обработки.</b> 👇"
+                caption = f"💳 <b>Чтобы получить результат без размытие, просто приобрети платные обработки.</b> 👇"
                 final_result.save(buf, format='PNG')
                 buf.seek(0)
                 bot.delete_message(chat_id=user_id, message_id=wait_mes_id)
