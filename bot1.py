@@ -209,7 +209,7 @@ def process_photo(src, admin_id, unique_code, message, photo_result, user_id, fi
         with BytesIO() as buf:
             if photo_result == "not_censorship":
                 final_result = inpainting_result.image
-                caption = f"✅ Фотография обработана."
+                caption = f"<b>✅ Фотография обработана</b>"
                 final_result.save(buf, format='PNG')
                 buf.seek(0)
                 bot.delete_message(chat_id=user_id, message_id=wait_mes_id)
@@ -244,11 +244,11 @@ def process_photo(src, admin_id, unique_code, message, photo_result, user_id, fi
         if photo_result == "not_censorship":
             bot.delete_message(chat_id=user_id, message_id=wait_mes_id)
             users_processing[user_id]['count_processing'] += 1
-            bot.send_message(chat_id=user_id, text='❌ Ошибка. Отправьте другое фото.', reply_to_message_id=message_id) 
+            bot.send_message(chat_id=user_id, text='<b>❌ Ошибка. Отправьте другое фото.</b>', reply_to_message_id=message_id, parse_mode='HTML') 
         if photo_result == "censorship":
             bot.delete_message(chat_id=user_id, message_id=wait_mes_id)
             users_processing[user_id]['free'] += 1
-            bot.send_message(chat_id=user_id, text='❌ Ошибка. Отправьте другое фото.', reply_to_message_id=message_id)
+            bot.send_message(chat_id=user_id, text='<b>❌ Ошибка. Отправьте другое фото.</b>', reply_to_message_id=message_id, parse_mode='HTML')
                   
         with open('data.yml', 'w') as file:
             yaml.safe_dump(users_processing, file)
@@ -343,7 +343,7 @@ def cancel_photo_1(call):
   user_id = call.message.caption.split('\n')[0].split(': ')[-1].strip()
   items = call.message.caption.split()
   photo_id = call.message.photo[-1].file_id
-  bot.send_photo(user_id, photo_id, caption="❌ Обработка отмененна. Отправь фото еще раз.")
+  bot.send_photo(user_id, photo_id, caption="<b>❌ Некорректная обработка. Фотография отклонена.</b>", parse_mode='HTML')
   deduct_processing(int(items[1]))
   refusal_caption = "❌ Фото отклонено"
   bot.edit_message_caption(chat_id=call.message.chat.id,
@@ -356,7 +356,7 @@ def cancel_photo(call):
   user_id = call.message.caption.split('\n')[0].split(': ')[-1].strip()
   items = call.message.caption.split()
   photo_id = call.message.photo[-1].file_id
-  bot.send_photo(user_id, photo_id, caption="❌ Некорректная обработка. Фотография отклонена.")
+  bot.send_photo(user_id, photo_id, caption="<b>❌ Некорректная обработка. Фотография отклонена.</b>", parse_mode='HTML')
   deduct_processing(int(items[1]))
   refusal_caption = "❌ Фото отклонено"
   bot.edit_message_caption(chat_id=call.message.chat.id,
@@ -609,7 +609,7 @@ def send_instructions(message):
     instructions = (f"<b>🗓 Инструкция:</b>\n\n"
               f"<b>🔶 Девушка на фото должна быть повернута передом, стоять прямо в ествественной позе с прямым ракурсом. Обязательно перед заказом обработки посмотрите пример обработанных фотографий.</b>\n\n"
               f"<b>🔶 Фотография обрабатываеться среднем в течении 1 минуты, время орбаботки зависит от нагруженности бота. Уточнить время обработки после заказа обработки всегда можно у Тех.Поддержки</b>\n\n"
-              f"<b>🔶 Если вашу фотографию обработать не получилось, бот отменит обрбаотку. Если вы хотите отменить ещё не выполненный заказ то пишете в Тех.Поддержку</b>\n\n"
+              f"<b>🔶 Если вашу фотографию обработать не получилось, бот отменит обработку. Если вы хотите отменить ещё не выполненный заказ то пишете в Тех.Поддержку</b>\n\n"
               f"<b>🔶 Мы не несем отвесвенность за плохой результат обработки.</b>\n\n\n"
               f"<b>📨 С вопросами можете обратиться сюда - @snapnudify_support</b>"
     )
